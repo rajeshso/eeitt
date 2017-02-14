@@ -14,7 +14,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
 
-class PrepopulationDataControllerSpec extends UnitSpec with ApplicationComponentsOnePerSuite with ScalaFutures {
+class PrepopulationDataControllerSpec extends EeittISpec with UnitSpec with ApplicationComponentsOnePerSuite with ScalaFutures  {
 
   implicit val m = fakeApplication.materializer
 
