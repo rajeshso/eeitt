@@ -16,10 +16,4 @@ import scala.concurrent.Future
 /**
   * Created by harrison on 14/02/17.
   */
-abstract class EeittISpec extends ServiceSpec with ResponseMatchers with WSRequest {
-  override val server = new EeittIntergrationServer(getClass.getSimpleName.takeRight(30))
-}
-class EeittIntergrationServer(override val testName: String) extends MicroServiceEmbeddedServer with UnitSpec{
-  private val save4later = ExternalServiceRunner.runFromJar("save4later")
-  override val externalServices = Seq(save4later)
-}
+

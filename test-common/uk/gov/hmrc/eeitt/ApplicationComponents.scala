@@ -19,6 +19,10 @@ package uk.gov.hmrc.eeitt
 import org.scalatest.{ BeforeAndAfterAll, TestSuite }
 import org.scalatestplus.play.guice.{ GuiceOneAppPerSuite, GuiceOneAppPerTest }
 import play.api._
+import uk.gov.hmrc.play.it.servicemanager.ServiceManagerClient
+import uk.gov.hmrc.play.it.{ ExternalService, ExternalServiceRunner, TestId }
+
+import scala.concurrent.duration._
 
 trait ApplicationComponentsOnePerTest extends GuiceOneAppPerTest with ApplicationComponents {
   this: TestSuite =>
@@ -59,4 +63,42 @@ trait ApplicationComponents extends BeforeAndAfterAll {
     Play.stop(a)
   }
 
+}
+
+trait ApplicationComponentsOnePerSuiteIntergration extends ApplicationComponents {
+  this: TestSuite =>
+  val testId = new TestId("IntergrationTest-EEITT")
+  val externalServiceNames = Seq("save4later")
+  protected val externalServices: Seq[ExternalService] = externalServiceNames.map(ExternalServiceRunner.runFromJar(_))
+  protected val externalServicePorts = ServiceManagerClient.start(testId, externalServices, 120 seconds)
+  val configMap = externalServicePorts.foldLeft(Map.empty[String, Any]) {
+    case (acc, (serviceName, port)) =>
+
+      Logger.debug(s"External service '$serviceName' is running on port: $port")
+
+      val updatedMap = acc +
+        (s"microservice.services.$serviceName.port" -> port) +
+        (s"microservice.services.$serviceName.host" -> "localhost")
+
+      updatedMap
+
+  }
+
+  val config: Configuration = play.api.Configuration.from(configMap)
+
+  val intergrationContext = context.copy(initialConfiguration = context.initialConfiguration ++ config)
+  val intergrationTestApplication = new ApplicationLoader().load(intergrationContext)
+  override def beforeAll() = beforeAll(intergrationTestApplication)
+
+  override def afterAll(): Unit = {
+    safelyStop("Stopping external services")(ServiceManagerClient.stop(testId, true))
+    afterAll(intergrationTestApplication)
+  }
+  def safelyStop[T](activity: String)(action: => T) {
+    try {
+      action
+    } catch {
+      case t: Throwable => Logger.error(s"An exception occurred while $activity", t)
+    }
+  }
 }
