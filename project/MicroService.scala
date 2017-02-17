@@ -47,9 +47,9 @@ trait MicroService {
     .configs(IntegrationTest)
     .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
     .settings(
-      unmanagedSourceDirectories in Test <<= (baseDirectory in Test)(base => Seq(base / "test", base / "test-common")),
+      unmanagedSourceDirectories in Test := Seq("test-common", "test").map(d => baseDirectory.value / d),
       Keys.fork in IntegrationTest := false,
-      unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it", base / "test-common")),
+      unmanagedSourceDirectories in IntegrationTest := Seq("test-common", "it").map(d => baseDirectory.value / d),
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
       parallelExecution in IntegrationTest := false)
