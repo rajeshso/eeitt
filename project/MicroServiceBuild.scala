@@ -1,9 +1,7 @@
 import sbt._
-import uk.gov.hmrc.SbtAutoBuildPlugin
-import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
-import uk.gov.hmrc.versioning.SbtGitVersioning
 
 object MicroServiceBuild extends Build with MicroService {
+
   import scala.util.Properties.envOrElse
 
   val appName = "eeitt"
@@ -13,8 +11,9 @@ object MicroServiceBuild extends Build with MicroService {
 }
 
 private object AppDependencies {
-  import play.sbt.PlayImport._
+
   import play.core.PlayVersion
+  import play.sbt.PlayImport._
 
   private val microserviceBootstrapVersion = "5.8.0"
   private val playAuthVersion = "4.2.0"
@@ -42,11 +41,12 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "play-config" % playConfigVersion,
     "uk.gov.hmrc" %% "logback-json-logger" % logbackJsonLoggerVersion,
     "uk.gov.hmrc" %% "domain" % domainVersion,
-    "uk.gov.hmrc" %% "http-caching-client" % httpCachingClientVersion  )
+    "uk.gov.hmrc" %% "http-caching-client" % httpCachingClientVersion)
 
   trait TestDependencies {
     lazy val scope: String = "test"
-    lazy val test : Seq[ModuleID] = ???
+    lazy val test: Seq[ModuleID] = ???
+    protected val httpVerbsTest = "0.1.0"
   }
 
   object Test {
@@ -75,7 +75,8 @@ private object AppDependencies {
         "org.pegdown" % "pegdown" % pegdownVersion % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % reactiveMongoTestVersion % scope,
-        "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.0-M1" % scope
+        "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.0-M1" % scope,
+        "uk.gov.hmrc" %% "http-verbs-test" % httpVerbsTest % scope
       )
     }.test
   }

@@ -1,23 +1,28 @@
 package uk.gov.hmrc.eeitt.controllers
 
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
 import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Result
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.FakeRequest
-import uk.gov.hmrc.eeitt.{ApplicationComponentsOnePerSuite, MicroserviceShortLivedCache}
+import uk.gov.hmrc.eeitt.{ApplicationComponentsOnePerSuite, ApplicationComponentsOnePerSuiteIntergration, MicroserviceShortLivedCache}
 import uk.gov.hmrc.http.cache.client.CacheMap
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.it.servicemanager.ServiceManagerClient
+import uk.gov.hmrc.play.it._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
-class PrepopulationDataControllerSpec extends UnitSpec with ApplicationComponentsOnePerSuite with ScalaFutures {
 
-  implicit val m = fakeApplication.materializer
+class PrepopulationDataControllerSpec extends UnitSpec with ApplicationComponentsOnePerSuiteIntergration with ScalaFutures with BeforeAndAfterAll {
 
+  implicit val m = intergrationTestApplication.materializer
   implicit val hc = HeaderCarrier()
 
   val prepopController = new PrepopulationDataController(MicroserviceShortLivedCache)

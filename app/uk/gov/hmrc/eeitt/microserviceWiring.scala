@@ -28,10 +28,10 @@ object MicroserviceAuthConnector extends AuthConnector with ServicesConfig {
 object MicroserviceShortLivedHttpCaching extends ShortLivedHttpCaching with AppName with ServicesConfig {
   override lazy val http = WSHttp
   override lazy val defaultSource = appName
-  override lazy val baseUri = baseUrl("cachable.short-lived-cache")
+  override lazy val baseUri = baseUrl("save4later")
   override lazy val domain = getConfString(
-    "cachable.short-lived-cache.domain",
-    throw new Exception(s"Could not find config 'cachable.short-lived-cache.domain'")
+    "save4later.domain",
+    throw new Exception(s"Could not find config 'save4later.domain'")
   )
 }
 
