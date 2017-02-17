@@ -65,9 +65,9 @@ trait ApplicationComponents extends BeforeAndAfterAll {
 
 }
 
-trait ApplicationComponentsOnePerSuiteIntergration extends ApplicationComponents {
+trait ApplicationComponentsOnePerSuiteIntegration extends ApplicationComponents {
   this: TestSuite =>
-  val testId = new TestId("IntergrationTest-EEITT")
+  val testId = new TestId("IntegrationTest-EEITT")
   val externalServiceNames = Seq("save4later")
   protected val externalServices: Seq[ExternalService] = externalServiceNames.map(ExternalServiceRunner.runFromJar(_))
   protected val externalServicePorts = ServiceManagerClient.start(testId, externalServices, 120 seconds)
@@ -86,13 +86,13 @@ trait ApplicationComponentsOnePerSuiteIntergration extends ApplicationComponents
 
   val config: Configuration = play.api.Configuration.from(configMap)
 
-  val intergrationContext = context.copy(initialConfiguration = context.initialConfiguration ++ config)
-  val intergrationTestApplication = new ApplicationLoader().load(intergrationContext)
-  override def beforeAll() = beforeAll(intergrationTestApplication)
+  val integrationContext = context.copy(initialConfiguration = context.initialConfiguration ++ config)
+  val integrationTestApplication = new ApplicationLoader().load(integrationContext)
+  override def beforeAll() = beforeAll(integrationTestApplication)
 
   override def afterAll(): Unit = {
     safelyStop("Stopping external services")(ServiceManagerClient.stop(testId, true))
-    afterAll(intergrationTestApplication)
+    afterAll(integrationTestApplication)
   }
   def safelyStop[T](activity: String)(action: => T) {
     try {

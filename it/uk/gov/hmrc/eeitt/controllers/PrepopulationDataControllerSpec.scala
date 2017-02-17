@@ -8,7 +8,7 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Result
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.FakeRequest
-import uk.gov.hmrc.eeitt.{ApplicationComponentsOnePerSuite, ApplicationComponentsOnePerSuiteIntergration, MicroserviceShortLivedCache}
+import uk.gov.hmrc.eeitt.{ApplicationComponentsOnePerSuite, ApplicationComponentsOnePerSuiteIntegration, MicroserviceShortLivedCache}
 import uk.gov.hmrc.http.cache.client.CacheMap
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.it.servicemanager.ServiceManagerClient
@@ -20,9 +20,9 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-class PrepopulationDataControllerSpec extends UnitSpec with ApplicationComponentsOnePerSuiteIntergration with ScalaFutures with BeforeAndAfterAll {
+class PrepopulationDataControllerSpec extends UnitSpec with ApplicationComponentsOnePerSuiteIntegration with ScalaFutures with BeforeAndAfterAll {
 
-  implicit val m = intergrationTestApplication.materializer
+  implicit val m = integrationTestApplication.materializer
   implicit val hc = HeaderCarrier()
 
   val prepopController = new PrepopulationDataController(MicroserviceShortLivedCache)
