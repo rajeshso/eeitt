@@ -8,6 +8,6 @@ verification.response.incorrect.arn.for.client.msg=incorrect ARN for client
 registration.lookup.not.found.msg=not found
 registration.lookup.multiple.found.msg=multiple found
 registration.incorrect.known.facts.business.users.msg=Invalid registration number or business postcode. Try again.
-registration.incorrect.known.facts.agents.msg=Invalid agent reference number or business postcode. Try again.
+registration.incorrect.known.facts.agents.msg=Invalid access code or business postcode. Try again.
 registration.multiple.found.msg=multiple found
 registration.already.registered=already registered
