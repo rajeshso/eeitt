@@ -42,13 +42,13 @@ object RegimeId {
 }
 
 object Arn {
-  def apply(value: String) = new Arn(value)
+  def apply(value: String) = new Arn(value.toUpperCase)
 
   implicit val format: Format[Arn] = ValueClassFormat.format(Arn.apply)(_.value)
 }
 
 object RegistrationNumber {
-  def apply(value: String) = new RegistrationNumber(value)
+  def apply(value: String) = new RegistrationNumber(value.toUpperCase)
 
   implicit val format: Format[RegistrationNumber] = {
     val format = ValueClassFormat.format(RegistrationNumber.apply)(_.value)
