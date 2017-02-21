@@ -291,4 +291,59 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
       jsonBodyOf(await(result)) shouldBe Json.obj("registrationNumber" -> businessUser.registrationNumber.value)
     }
   }
+
+  "Registration lower case example" should {
+    "fail" in {
+      val hmrcAuditCheck = mock[AuditCheck]
+      val findUserCheck = mock[FindUserCheck]
+      val addRegistrationCheck = mock[AddRegistrationCheck]
+      val findRegistrationCheck = mock[FindRegistrationCheck]
+
+      val fakeRequest = FakeRequest(Helpers.POST, "/register").withBody(toJson(RegisterBusinessUserRequest(GroupId("1"), RegistrationNumber("abcdefghijklmno"), Some(Postcode("BN12 4XL")))))
+
+      val messages = messagesApiDefault.preferred(fakeRequest)
+
+      implicit val a = AddRegistrationTC
+        .callCheck(addRegistrationCheck)
+        .response(Right(()))
+        .noChecks[RegisterBusinessUserRequest]
+
+      implicit val b = FindRegistrationTC
+        .callCheck(findRegistrationCheck)
+        .noChecks[RegisterBusinessUserRequest]
+
+      implicit val c = FindUserTC
+        .callCheck(findUserCheck)
+        .response(List(testEtmpBusinessUser()))
+        .withChecks { req: RegisterBusinessUserRequest =>
+          inside(req) {
+            case RegisterBusinessUserRequest(groupId, registrationNumber, postcode) =>
+              groupId.value should be("1")
+              registrationNumber.value should be("ABCDEFGHIJKLMNO")
+              convertOptionToValuable(postcode).value.value should be("BN12 4XL")
+          }
+        }
+
+      implicit val d = HmrcAuditTC
+        .callCheck(hmrcAuditCheck)
+        .withChecks { ad =>
+          ad.path should be("/register")
+          ad.postcode.map(_.value) should be(Some("BN12 4XL"))
+
+          ad.tags should contain("user-type" -> "business-user")
+          ad.tags should contain("registration-number" -> "ABCDEFGHIJKLMNO")
+          ad.tags should contain("group-id" -> "1")
+        }
+
+      (hmrcAuditCheck.call _).expects().once
+      (findUserCheck.call _).expects().once
+      (addRegistrationCheck.call _).expects().once
+      (findRegistrationCheck.call _).expects().once
+
+      val action = TestRegistrationController.register[RegisterBusinessUserRequest, EtmpBusinessUser]
+      val result = action(fakeRequest)
+      status(result) shouldBe Status.OK
+      jsonBodyOf(await(result)) shouldBe RESPONSE_OK.toJson(messages)
+    }
+  }
 }
