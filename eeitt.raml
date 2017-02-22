@@ -3,34 +3,46 @@ title: Eeitt
 version: 1
 baseUri: /eeitt
 
+types:
+  CacheId:
+    usage: An Id of the owner of data, such as a Government Gateway GID or CID
+    type: string
+    example: A-B-C
+  FormId:
+    usage: An Id of a type of data stored
+    type: string
+    example: AboutYou
+
 /prepopulation:
   description: |
-      Store and retrieve prepopulation data for tax forms, eeitt or dfs
+      Store and retrieve prepopulation data for tax forms, eeitt or dfs,
+      initially a common About You page
 
   /{cacheId}:
-    description: Used to identify the owner of the data, likely to by the Government Gateway GID or CID, depending on the functionality required
+    description: |
+      Prepopulation data stored for a specific owner, possibly not
+      retained beyond 28 days
+    uriParameters:
+      cacheId: CacheId
 
     delete:
       description: |
-        For non-production environments only, there is an extra endpoint, intended to facilitate testing
-
+        For non-production environments only, intended to facilitate testing
       responses:
         204:
         400:
+
     /{formId}:
-      displayName: Identifies a particular data-set, it could be the identifier of a form page, but where multiple forms share common persisted data, then one way or another a common identifier for that data needs to be used
+      description: A piece of prepopulation data, any valid JSON
+      uriParameters:
+        formId: FormId
+
       put:
         body:
           application/json:
-            description: |
-              Any valid JSON
-
         responses:
           200:
       get:
-        description: |
-          N.b. Data may not be persisted after 28 days
-
         responses:
           200:
             body:
