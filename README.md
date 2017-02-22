@@ -4,6 +4,20 @@
 
 This is the backend for the EEITT microservice.
 
+## Pre-population API
+
+There are two endpoints for persisting form pre-population data in production.
+
+PUT        /eeitt/prepopulation/:cacheId/:formId
+
+GET        /eeitt/prepopulation/:cacheId/:formId
+
+In non-production environments, there is an extra endpoint, intended to facilitate testing
+
+DELETE     /eeitt/prepopulation/:cacheId
+
+See eeitt.raml for more formal detail
+
 ### License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")

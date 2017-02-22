@@ -1,0 +1,50 @@
+#%RAML 1.0
+title: Eeitt
+version: 1
+baseUri: /eeitt
+
+types:
+  CacheId:
+    usage: An Id of the owner of data, such as a Government Gateway GID or CID
+    type: string
+    example: A-B-C
+  FormId:
+    usage: An Id of a type of data stored
+    type: string
+    example: AboutYou
+
+/prepopulation:
+  description: |
+      Store and retrieve prepopulation data for tax forms, eeitt or dfs,
+      initially a common About You page
+
+  /{cacheId}:
+    description: |
+      Prepopulation data stored for a specific owner, possibly not
+      retained beyond 28 days
+    uriParameters:
+      cacheId: CacheId
+
+    delete:
+      description: |
+        For non-production environments only, intended to facilitate testing
+      responses:
+        204:
+        400:
+
+    /{formId}:
+      description: A piece of prepopulation data, any valid JSON
+      uriParameters:
+        formId: FormId
+
+      put:
+        body:
+          application/json:
+        responses:
+          200:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+          204:
