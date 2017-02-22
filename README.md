@@ -8,13 +8,13 @@ This is the backend for the EEITT microservice.
 
 There are two endpoints for persisting form pre-population data in production.
 
-PUT        /prepopulation/:cacheId/:formId
+PUT        /eeitt/prepopulation/:cacheId/:formId
 
-GET        /prepopulation/:cacheId/:formId
+GET        /eeitt/prepopulation/:cacheId/:formId
 
 In non-production environments, there is an extra endpoint, intended to facilitate testing
 
-DELETE     /prepopulation/:cacheId
+DELETE     /eeitt/prepopulation/:cacheId
 
 The cacheId parameter, a string, is used to identify the owner of the data, likely to by the Government Gateway GID or CID, depending on the functionality required.
   
