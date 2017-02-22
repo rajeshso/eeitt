@@ -42,5 +42,4 @@ class MongoRegistrationAgentRepository(implicit mongo: () => DB)
         Left(r.message)
     }
   }
-
 }
