@@ -1,0 +1,38 @@
+#%RAML 1.0
+title: Eeitt
+version: 1
+baseUri: /eeitt
+
+/prepopulation:
+  description: |
+      Store and retrieve prepopulation data for tax forms, eeitt or dfs
+
+  /{cacheId}:
+    description: Used to identify the owner of the data, likely to by the Government Gateway GID or CID, depending on the functionality required
+
+    delete:
+      description: |
+        For non-production environments only, there is an extra endpoint, intended to facilitate testing
+
+      responses:
+        204:
+        400:
+    /{formId}:
+      displayName: Identifies a particular data-set, it could be the identifier of a form page, but where multiple forms share common persisted data, then one way or another a common identifier for that data needs to be used
+      put:
+        body:
+          application/json:
+            description: |
+              Any valid JSON
+
+        responses:
+          200:
+      get:
+        description: |
+          N.b. Data may not be persisted after 28 days
+
+        responses:
+          200:
+            body:
+              application/json:
+          204:
