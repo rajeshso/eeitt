@@ -1,28 +1,32 @@
 package uk.gov.hmrc.eeitt.controllers
 
-import akka.stream.Materializer
-import org.scalatest.concurrent.ScalaFutures
+import com.typesafe.config.{Config, ConfigFactory}
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.Inside
-import play.api.Environment
+import org.scalatest.concurrent.ScalaFutures
 import play.api.http.Status
-import play.api.i18n.{ Messages, MessagesApi, DefaultLangs, DefaultMessagesApi }
+import play.api.i18n.{DefaultLangs, DefaultMessagesApi, Messages}
 import play.api.libs.json.Json
 import play.api.libs.json.Json._
-import play.api.test.{ FakeRequest, Helpers }
-import uk.gov.hmrc.eeitt.typeclasses.HmrcAudit
-import uk.gov.hmrc.eeitt.{ EtmpFixtures, RegistrationFixtures, TypeclassFixtures }
-import uk.gov.hmrc.eeitt.model.{ VerificationResponse, _ }
-import uk.gov.hmrc.play.http.HeaderCarrier
-import uk.gov.hmrc.play.test.{ UnitSpec, WithFakeApplication }
-import org.scalamock.scalatest.MockFactory
+import play.api.mvc.Result
+import play.api.test.Helpers._
+import play.api.test.{FakeRequest, Helpers}
+import play.api.{Configuration, Environment}
 import uk.gov.hmrc.eeitt.checks._
-import uk.gov.hmrc.eeitt.ApplicationComponentsOnePerTest
+import uk.gov.hmrc.eeitt.model.{VerificationResponse, _}
+import uk.gov.hmrc.eeitt.typeclasses.HmrcAudit
+import uk.gov.hmrc.eeitt.{EtmpFixtures, RegistrationFixtures, TypeclassFixtures}
+import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.play.test.UnitSpec
 
-class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOnePerTest with Inside with EtmpFixtures with RegistrationFixtures with TypeclassFixtures with ScalaFutures with MockFactory {
+import scala.concurrent.Future
 
-  implicit val materializer: Materializer = fakeApplication.materializer
+class RegistrationControllerSpec extends UnitSpec with Inside with EtmpFixtures with RegistrationFixtures with TypeclassFixtures with ScalaFutures with MockFactory {
 
-  val messagesApiDefault = new DefaultMessagesApi(Environment.simple(), fakeApplication.configuration, new DefaultLangs(fakeApplication.configuration))
+  import scala.collection.JavaConverters._
+  val config: Config = ConfigFactory.parseMap(Map.empty[String, Object].asJava).withFallback(ConfigFactory.defaultReference())
+  val configuration = Configuration(config)
+  val messagesApiDefault = new DefaultMessagesApi(Environment.simple(), configuration, new DefaultLangs(configuration))
 
   object TestRegistrationController extends RegistrationControllerHelper {
     val messagesApi = messagesApiDefault
@@ -33,38 +37,38 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
       val fakeRequest = FakeRequest()
       implicit val a = FindRegistrationTC.response(List(testRegistrationBusinessUser())).noChecks[(GroupId, RegimeId)]
       val action = TestRegistrationController.verify((GroupId("1"), RegimeId("ZZ")))
-      val result = action(fakeRequest)
+      val result: Future[Result] = action(fakeRequest)
       status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe toJson(VerificationResponse(true))
+      contentAsJson(result) shouldBe toJson(VerificationResponse(true))
     }
+  }
 
-    "return 200 and is not allowed for successful registration lookup where regime is not authorised" in {
-      val fakeRequest = FakeRequest()
-      implicit val a = FindRegistrationTC.response(List.empty[RegistrationBusinessUser]).noChecks[(GroupId, RegimeId)]
-      val action = TestRegistrationController.verify((GroupId("1"), RegimeId("ZZ")))
-      val result = action(fakeRequest)
-      status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe toJson(VerificationResponse(false))
-    }
+  "return 200 and is not allowed for successful registration lookup where regime is not authorised" in {
+    val fakeRequest = FakeRequest()
+    implicit val a = FindRegistrationTC.response(List.empty[RegistrationBusinessUser]).noChecks[(GroupId, RegimeId)]
+    val action = TestRegistrationController.verify((GroupId("1"), RegimeId("ZZ")))
+    val result = action(fakeRequest)
+    status(result) shouldBe Status.OK
+    contentAsJson(result) shouldBe toJson(VerificationResponse(false))
+  }
 
-    "return 200 and is not allowed for a lookup which returned multiple registration instances" in {
-      val fakeRequest = FakeRequest()
-      implicit val a = FindRegistrationTC.response(List(testRegistrationBusinessUser(), testRegistrationBusinessUser())).noChecks[(GroupId, RegimeId)]
+  "return 200 and is not allowed for a lookup which returned multiple registration instances" in {
+    val fakeRequest = FakeRequest()
+    implicit val a = FindRegistrationTC.response(List(testRegistrationBusinessUser(), testRegistrationBusinessUser())).noChecks[(GroupId, RegimeId)]
 
-      val action = TestRegistrationController.verify((GroupId("1"), RegimeId("ZZ")))
-      val result = action(fakeRequest)
-      status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe toJson(VerificationResponse(false))
-    }
+    val action = TestRegistrationController.verify((GroupId("1"), RegimeId("ZZ")))
+    val result = action(fakeRequest)
+    status(result) shouldBe Status.OK
+    contentAsJson(result) shouldBe toJson(VerificationResponse(false))
+  }
 
-    "return 200 and is allowed for successful registration lookup of agent" in {
-      val fakeRequest = FakeRequest()
-      implicit val a = FindRegistrationTC.response(List(testRegistrationAgent())).noChecks[GroupId]
-      val action = TestRegistrationController.verify(GroupId("1"))
-      val result = action(fakeRequest)
-      status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe toJson(VerificationResponse(true))
-    }
+  "return 200 and is allowed for successful registration lookup of agent" in {
+    val fakeRequest = FakeRequest()
+    implicit val a = FindRegistrationTC.response(List(testRegistrationAgent())).noChecks[GroupId]
+    val action = TestRegistrationController.verify(GroupId("1"))
+    val result = action(fakeRequest)
+    status(result) shouldBe Status.OK
+    contentAsJson(result) shouldBe toJson(VerificationResponse(true))
   }
 
   "POST /eeitt-auth/register" should {
@@ -78,7 +82,7 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
 
       val fakeRequest = FakeRequest(Helpers.POST, "/register").withBody(toJson(RegisterBusinessUserRequest(GroupId("1"), RegistrationNumber("1234567890ABCDE"), Some(Postcode("SE39EPX")))))
 
-      val messages = messagesApiDefault.preferred(fakeRequest)
+      val messages: Messages = messagesApiDefault.preferred(fakeRequest)
 
       implicit val a = AddRegistrationTC
         .callCheck(addRegistrationCheck)
@@ -121,7 +125,7 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
       val action = TestRegistrationController.register[RegisterBusinessUserRequest, EtmpBusinessUser]
       val result = action(fakeRequest)
       status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe RESPONSE_OK.toJson(messages)
+      contentAsJson(result) shouldBe RESPONSE_OK.toJson(messages)
     }
 
     "Register agent and send audit change" in {
@@ -175,7 +179,7 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
       val action = TestRegistrationController.register[RegisterAgentRequest, EtmpAgent]
       val result = action(fakeRequest)
       status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe RESPONSE_OK.toJson(messages)
+      contentAsJson(result) shouldBe RESPONSE_OK.toJson(messages)
     }
 
     "return 200 and error if submitted known facts are different than stored known facts about business user" in {
@@ -205,7 +209,7 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
       val action = TestRegistrationController.register[RegisterBusinessUserRequest, EtmpBusinessUser]
       val result = action(fakeRequest)
       status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe INCORRECT_KNOWN_FACTS_BUSINESS_USERS.toJson(messages)
+      contentAsJson(result) shouldBe INCORRECT_KNOWN_FACTS_BUSINESS_USERS.toJson(messages)
     }
 
     "return 200 and error if submitted known facts are different than stored known facts about agent" in {
@@ -233,7 +237,7 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
       val action = TestRegistrationController.register[RegisterAgentRequest, EtmpAgent]
       val result = action(fakeRequest)
       status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe INCORRECT_KNOWN_FACTS_AGENTS.toJson(messages)
+      contentAsJson(result) shouldBe INCORRECT_KNOWN_FACTS_AGENTS.toJson(messages)
     }
 
     "return 400 and error if submitted known facts are different than stored known facts about agent" in {
@@ -258,7 +262,7 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
       val action = TestRegistrationController.prepopulate[GroupId, RegistrationAgent](GroupId("1"))
       val result = action(fakeRequest)
       status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe Json.obj("arn" -> agent.arn.value)
+      contentAsJson(result) shouldBe Json.obj("arn" -> agent.arn.value)
     }
 
     "return 404 where arn for agent is not found in db" in {
@@ -267,7 +271,7 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
       val action = TestRegistrationController.prepopulate[GroupId, RegistrationAgent](GroupId("1"))
       val result = action(fakeRequest)
       status(result) shouldBe Status.NOT_FOUND
-      bodyOf(await(result)) shouldBe ""
+      contentAsString(result) shouldBe ""
     }
 
     "return first arn of first agent if there are more agents in db" in {
@@ -278,7 +282,7 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
       val action = TestRegistrationController.prepopulate[GroupId, RegistrationAgent](GroupId("1"))
       val result = action(fakeRequest)
       status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe Json.obj("arn" -> agent1.arn.value)
+      contentAsJson(result) shouldBe Json.obj("arn" -> agent1.arn.value)
     }
 
     "return registrationNumber for business user" in {
@@ -288,7 +292,34 @@ class RegistrationControllerSpec extends UnitSpec with ApplicationComponentsOneP
       val action = TestRegistrationController.prepopulate[(GroupId, RegimeId), RegistrationBusinessUser]((GroupId("1"), RegimeId("ZZ")))
       val result = action(fakeRequest)
       status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe Json.obj("registrationNumber" -> businessUser.registrationNumber.value)
+      contentAsJson(result) shouldBe Json.obj("registrationNumber" -> businessUser.registrationNumber.value)
+    }
+  }
+
+  "Registration with lower case reg number" should {
+    "work" in {
+
+      val fakeRequest = FakeRequest(Helpers.POST, "/register").withBody(toJson(RegisterBusinessUserRequest(GroupId("1"), RegistrationNumber("abcdefghijklmno"), Some(Postcode("BN12 4XL")))))
+
+      implicit val a = AddRegistrationTC.noChecks[RegisterBusinessUserRequest]
+      implicit val b = FindRegistrationTC.noChecks[RegisterBusinessUserRequest]
+
+      implicit val c = FindUserTC
+        .response(List(testEtmpBusinessUser()))
+        .withChecks { req: RegisterBusinessUserRequest =>
+          inside(req) {
+            case RegisterBusinessUserRequest(groupId, registrationNumber, postcode) =>
+              groupId.value should be("1")
+              registrationNumber.value should be("ABCDEFGHIJKLMNO")
+              convertOptionToValuable(postcode).value.value should be("BN12 4XL")
+          }
+        }
+
+      implicit val d = HmrcAuditTC.noChecks
+
+      val action = TestRegistrationController.register[RegisterBusinessUserRequest, EtmpBusinessUser]
+      val result = action(fakeRequest)
+      status(result) shouldBe Status.OK
     }
   }
 }
