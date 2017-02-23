@@ -1,21 +1,21 @@
 package uk.gov.hmrc.eeitt.controllers
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Inside
 import org.scalatest.concurrent.ScalaFutures
 import play.api.http.Status
-import play.api.i18n.{DefaultLangs, DefaultMessagesApi, Messages}
+import play.api.i18n.{ DefaultLangs, DefaultMessagesApi, Messages }
 import play.api.libs.json.Json
 import play.api.libs.json.Json._
 import play.api.mvc.Result
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, Helpers}
-import play.api.{Configuration, Environment}
+import play.api.test.{ FakeRequest, Helpers }
+import play.api.{ Configuration, Environment }
 import uk.gov.hmrc.eeitt.checks._
-import uk.gov.hmrc.eeitt.model.{VerificationResponse, _}
+import uk.gov.hmrc.eeitt.model.{ VerificationResponse, _ }
 import uk.gov.hmrc.eeitt.typeclasses.HmrcAudit
-import uk.gov.hmrc.eeitt.{EtmpFixtures, RegistrationFixtures, TypeclassFixtures}
+import uk.gov.hmrc.eeitt.{ EtmpFixtures, RegistrationFixtures, TypeclassFixtures }
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -374,7 +374,7 @@ class RegistrationControllerSpec extends UnitSpec with Inside with EtmpFixtures 
       val action = TestRegistrationController.register[RegisterBusinessUserRequest, EtmpBusinessUser]
       val result = action(fakeRequest)
       status(result) shouldBe Status.OK
-      jsonBodyOf(await(result)) shouldBe RESPONSE_OK.toJson(messages)
+      contentAsJson(result) shouldBe RESPONSE_OK.toJson(messages)
     }
   }
 }
