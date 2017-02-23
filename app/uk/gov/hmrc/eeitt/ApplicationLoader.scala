@@ -24,7 +24,7 @@ import uk.gov.hmrc.eeitt.controllers.{ RegistrationController, EtmpDataLoaderCon
 import uk.gov.hmrc.eeitt.repositories.{ MongoEtmpAgentRepository, MongoEtmpBusinessUsersRepository, MongoRegistrationAgentRepository, MongoRegistrationBusinessUserRepository }
 import uk.gov.hmrc.eeitt.services.HmrcAuditService
 import uk.gov.hmrc.play.filters.{ NoCacheFilter, RecoveryFilter }
-import uk.gov.hmrc.play.graphite.{ GraphiteConfig, GraphiteMetricsImpl }
+import uk.gov.hmrc.play.graphite.GraphiteConfig
 import uk.gov.hmrc.play.audit.http.config.ErrorAuditingSettings
 import uk.gov.hmrc.play.config.ControllerConfig
 import uk.gov.hmrc.play.auth.controllers.AuthParamsControllerConfig
@@ -152,7 +152,14 @@ trait ApplicationModule extends BuiltInComponents
 
   lazy val appRouter = new app.Routes(httpErrorHandler, registrationController, etmpDataLoaderController, prepopDataController)
 
-  override lazy val router: Router = new prod.Routes(httpErrorHandler, appRouter, healthRoutes, metricsController)
+  lazy val prodRoutes = new prod.Routes(httpErrorHandler, appRouter, healthRoutes, metricsController)
+
+  override lazy val router: Router = configuration.getString("application.router") match {
+    case Some("testOnlyDoNotUseInAppConf.Routes") =>
+      new testOnlyDoNotUseInAppConf.Routes(httpErrorHandler, prodRoutes, prepopDataController)
+    case _ =>
+      prodRoutes
+  }
 
   object ControllerConfiguration extends ControllerConfig {
     lazy val controllerConfigs = configuration.underlying.as[Config]("controllers")

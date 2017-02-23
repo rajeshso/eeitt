@@ -12,5 +12,4 @@
 # Add all the application routes to the prod.routes file
 ->         /                          prod.Routes
 
-DELETE     /prepopulation/:cacheId                           uk.gov.hmrc.eeitt.controllers.PrepopulationDataController.delete(cacheId : String)
-
+DELETE     /eeitt/test-only/prepopulation/:cacheId                           uk.gov.hmrc.eeitt.controllers.PrepopulationDataController.delete(cacheId : String)

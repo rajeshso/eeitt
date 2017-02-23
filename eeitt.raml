@@ -25,13 +25,6 @@ types:
     uriParameters:
       cacheId: CacheId
 
-    delete:
-      description: |
-        For non-production environments only, intended to facilitate testing
-      responses:
-        204:
-        400:
-
     /{formId}:
       description: A piece of prepopulation data, any valid JSON
       uriParameters:
@@ -48,3 +41,19 @@ types:
             body:
               application/json:
           204:
+
+  /test-only:
+    description: |
+      Ability to delete prepopulation data, for non-production environments
+       only, intended to facilitate testing
+
+    /{cacheId}:
+      uriParameters:
+        cacheId: CacheId
+
+      delete:
+        description: |
+          Delete whole cacheId
+        responses:
+          204:
+          400:
