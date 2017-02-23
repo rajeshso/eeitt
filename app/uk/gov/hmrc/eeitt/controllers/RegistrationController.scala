@@ -100,7 +100,7 @@ trait RegistrationControllerHelper extends BaseController with I18nSupport {
           // This occurs when registrationNumber is less that 15 characters. We want in such a case
           // return proper response (200) to the client.
           case (JsPath(KeyPathNode("registrationNumber") :: _), _) :: _ =>
-                Ok(INCORRECT_KNOWN_FACTS_BUSINESS_USERS.toJson(messages))
+            Ok(INCORRECT_KNOWN_FACTS_BUSINESS_USERS.toJson(messages))
           case _ => BadRequest(Json.obj("message" -> JsError.toJson(jsonErrors)))
         }
         Future.successful(response)
