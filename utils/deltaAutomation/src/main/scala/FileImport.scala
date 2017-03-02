@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by harrison on 02/03/17.
   */
-object FileImport {
+object FileImport extends App {
   println("Please enter the location of the file as well as the file name including any file extension then a comma then the password:")
   val fileDetails: Array[String] = readLine.split(",").map(_.toString)
   val fileLocation: String = fileDetails.head
