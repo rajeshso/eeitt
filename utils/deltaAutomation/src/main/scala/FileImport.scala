@@ -12,11 +12,10 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by harrison on 02/03/17.
   */
-object FileImport extends App {
-  println("Please enter the location of the file as well as the file name including any file extension then a comma then the password:")
-  val fileDetails: Array[String] = readLine.split(",").map(_.toString)
-  val fileLocation: String = fileDetails.head
-  val password: String = fileDetails.tail.head
+object FileImport extends App{
+  println(args.toList)
+  val fileLocation: String = args.apply(0)
+  val password: String = args.apply(1)
   val myWorkbook = importFile(s"$fileLocation", s"$password")
   val fileAsString = convertFileToString(myWorkbook)
   val splitAgentOrBusiness: List[Array[String]] = fileAsString.map(f => f.split("\\|"))
@@ -29,8 +28,8 @@ object FileImport extends App {
     case "001" => filterBusinessUser(fileAsString)
     case _ => null
   }
-  println("Please enter a file location to output to:")
-  val fileName: String = scala.io.StdIn.readLine()
+
+  val fileName: String = args.apply(2)
   printToFile(new File(s"$fileName$currentDateTime.txt")) { p => filteredFile.foreach(p.println) }
 
   def filterBusinessUser(fileString: List[String]): List[String] = {
