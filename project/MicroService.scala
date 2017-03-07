@@ -5,6 +5,7 @@ import sbt.Tests.{SubProcess, Group}
 import sbt._
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 import scoverage.ScoverageKeys
+import com.typesafe.sbt.SbtScalariform
 
 trait MicroService {
 
@@ -46,6 +47,7 @@ trait MicroService {
     )
     .configs(IntegrationTest)
     .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
+    .settings(SbtScalariform.scalariformSettingsWithIt: _*)
     .settings(
       unmanagedSourceDirectories in Test := Seq("test-common", "test").map(d => baseDirectory.value / d),
       Keys.fork in IntegrationTest := false,
