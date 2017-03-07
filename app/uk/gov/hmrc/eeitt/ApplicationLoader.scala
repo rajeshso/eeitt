@@ -23,6 +23,7 @@ import scala.concurrent.Future
 import uk.gov.hmrc.eeitt.controllers.{ RegistrationController, EtmpDataLoaderController, PrepopulationDataController }
 import uk.gov.hmrc.eeitt.repositories.{ MongoEtmpAgentRepository, MongoEtmpBusinessUsersRepository, MongoRegistrationAgentRepository, MongoRegistrationBusinessUserRepository }
 import uk.gov.hmrc.eeitt.services.HmrcAuditService
+import uk.gov.hmrc.play.config.AppName
 import uk.gov.hmrc.play.filters.{ NoCacheFilter, RecoveryFilter }
 import uk.gov.hmrc.play.graphite.GraphiteConfig
 import uk.gov.hmrc.play.audit.http.config.ErrorAuditingSettings
@@ -82,13 +83,14 @@ class Graphite(configuration: Configuration) extends GraphiteConfig {
 
 trait ApplicationModule extends BuiltInComponents
     with AhcWSComponents
-    with I18nComponents { self =>
+    with I18nComponents
+    with AppName { self =>
+
+  override lazy val appNameConfiguration = configuration
 
   Logger.info(s"Starting microservice : $appName : in mode : ${environment.mode}")
 
   new Graphite(configuration).onStart(configurationApp)
-
-  lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
 
   override lazy val httpErrorHandler: HttpErrorHandler = new CustomErrorHandling(auditConnector, appName, environment, configuration, sourceMapper, Some(router))
 

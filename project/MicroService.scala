@@ -5,6 +5,7 @@ import sbt.Tests.{SubProcess, Group}
 import sbt._
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 import scoverage.ScoverageKeys
+import com.typesafe.sbt.SbtScalariform
 
 trait MicroService {
 
@@ -46,10 +47,11 @@ trait MicroService {
     )
     .configs(IntegrationTest)
     .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
+    .settings(SbtScalariform.scalariformSettingsWithIt: _*)
     .settings(
-      unmanagedSourceDirectories in Test <<= (baseDirectory in Test)(base => Seq(base / "test", base / "test-common")),
+      unmanagedSourceDirectories in Test := Seq("test-common", "test").map(d => baseDirectory.value / d),
       Keys.fork in IntegrationTest := false,
-      unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it", base / "test-common")),
+      unmanagedSourceDirectories in IntegrationTest := Seq("test-common", "it").map(d => baseDirectory.value / d),
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
       parallelExecution in IntegrationTest := false)
