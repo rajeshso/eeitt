@@ -16,62 +16,41 @@
 
 package uk.gov.hmrc.eeitt
 
+import java.io.File
 import org.scalatest.{ BeforeAndAfterAll, TestSuite }
-import org.scalatestplus.play.guice.{ GuiceOneAppPerSuite, GuiceOneAppPerTest }
+import org.scalatestplus.play.{ BaseOneAppPerSuite, FakeApplicationFactory }
 import play.api._
 import uk.gov.hmrc.play.it.servicemanager.ServiceManagerClient
 import uk.gov.hmrc.play.it.{ ExternalService, ExternalServiceRunner, TestId }
 
 import scala.concurrent.duration._
 
-trait ApplicationComponentsOnePerTest extends GuiceOneAppPerTest with ApplicationComponents {
+trait ApplicationComponentsOnePerSuite extends BaseOneAppPerSuite with FakeApplicationFactory {
   this: TestSuite =>
 
-  override val fakeApplication = new ApplicationLoader().load(context)
+  def additionalConfiguration: Map[String, Any] = Map.empty[String, Any]
 
-  override def beforeAll() = beforeAll(fakeApplication)
+  private lazy val config = Configuration.from(additionalConfiguration)
 
-  override def afterAll() = afterAll(fakeApplication)
+  override lazy val fakeApplication =
+    new ApplicationLoader().load(context.copy(initialConfiguration = context.initialConfiguration ++ config))
+
+  def context: play.api.ApplicationLoader.Context = {
+    val classLoader = play.api.ApplicationLoader.getClass.getClassLoader
+    val env = new Environment(new File("."), classLoader, Mode.Test)
+    play.api.ApplicationLoader.createContext(env)
+  }
 }
 
-trait ApplicationComponentsOnePerSuite extends GuiceOneAppPerSuite with ApplicationComponents {
-  this: TestSuite =>
-
-  override val fakeApplication = new ApplicationLoader().load(context)
-
-  override def beforeAll() = beforeAll(fakeApplication)
-
-  override def afterAll() = afterAll(fakeApplication)
-}
-
-trait ApplicationComponents extends BeforeAndAfterAll {
-  this: TestSuite =>
-
-  def context: ApplicationLoader.Context = {
-    val classLoader = ApplicationLoader.getClass.getClassLoader
-    val env = new Environment(new java.io.File("."), classLoader, Mode.Test)
-    ApplicationLoader.createContext(env)
-  }
-
-  def beforeAll(a: Application) {
-    super.beforeAll()
-    Play.start(a)
-  }
-
-  def afterAll(a: Application) {
-    super.afterAll()
-    Play.stop(a)
-  }
-
-}
-
-trait ApplicationComponentsOnePerSuiteIntegration extends ApplicationComponents {
+trait ApplicationComponentsOnePerSuiteIntegration extends ApplicationComponentsOnePerSuite with BeforeAndAfterAll {
   this: TestSuite =>
   val testId = new TestId("IntegrationTest-EEITT")
   val externalServiceNames = Seq("save4later")
+
   protected val externalServices: Seq[ExternalService] = externalServiceNames.map(ExternalServiceRunner.runFromJar(_))
   protected val externalServicePorts = ServiceManagerClient.start(testId, externalServices, 120 seconds)
-  val configMap = externalServicePorts.foldLeft(Map.empty[String, Any]) {
+
+  override val additionalConfiguration = externalServicePorts.foldLeft(Map.empty[String, Any]) {
     case (acc, (serviceName, port)) =>
 
       Logger.debug(s"External service '$serviceName' is running on port: $port")
@@ -84,15 +63,8 @@ trait ApplicationComponentsOnePerSuiteIntegration extends ApplicationComponents 
 
   }
 
-  val config: Configuration = play.api.Configuration.from(configMap)
-
-  val integrationContext = context.copy(initialConfiguration = context.initialConfiguration ++ config)
-  val integrationTestApplication = new ApplicationLoader().load(integrationContext)
-  override def beforeAll() = beforeAll(integrationTestApplication)
-
   override def afterAll(): Unit = {
     safelyStop("Stopping external services")(ServiceManagerClient.stop(testId, true))
-    afterAll(integrationTestApplication)
   }
   def safelyStop[T](activity: String)(action: => T) {
     try {

@@ -1,6 +1,5 @@
 package uk.gov.hmrc.eeitt.controllers
 
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
 import play.api.Logger
 import play.api.http.Status
@@ -20,9 +19,9 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-class PrepopulationDataControllerSpec extends UnitSpec with ApplicationComponentsOnePerSuiteIntegration with ScalaFutures with BeforeAndAfterAll {
+class PrepopulationDataControllerSpec extends UnitSpec with ApplicationComponentsOnePerSuiteIntegration with ScalaFutures {
 
-  implicit val m = integrationTestApplication.materializer
+  implicit val m = fakeApplication.materializer
   implicit val hc = HeaderCarrier()
 
   val prepopController = new PrepopulationDataController(MicroserviceShortLivedCache)
