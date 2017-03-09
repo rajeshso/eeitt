@@ -34,7 +34,7 @@ object FileImport extends App{
 
   def filterBusinessUser(fileString: List[String]): List[String] = {
     val deleteFirstLine = fileString.tail
-    val splitString = deleteFirstLine.map(f => f.split("\\|")).filter(f => !(f.contains("select") || f.size == 1))
+    val splitString = deleteFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
      splitString.foreach(f => println(f.toList))
     val parsedData = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}"""))
     parsedData
@@ -42,7 +42,7 @@ object FileImport extends App{
 
   def filterAgentUser(fileString: List[String]): List[String] = {
     val delFirstLine = fileString.tail
-    val splitString = delFirstLine.map(f => f.split("\\|")).filter(f => !(f.contains("select") || f.size == 1))
+    val splitString = delFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
     val parsedData = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}|${x(12)}|||||||||${x(21)}|${x(22)}"""))
     parsedData
   }
