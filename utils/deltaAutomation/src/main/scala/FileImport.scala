@@ -13,7 +13,6 @@ import scala.collection.mutable.ListBuffer
   * Created by harrison on 02/03/17.
   */
 object FileImport extends App{
-  println(args.toList)
   val fileLocation: String = args.apply(0)
   val password: String = args.apply(1)
   val myWorkbook = importFile(s"$fileLocation", s"$password")
@@ -35,7 +34,6 @@ object FileImport extends App{
   def filterBusinessUser(fileString: List[String]): List[String] = {
     val deleteFirstLine = fileString.tail
     val splitString = deleteFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
-     splitString.foreach(f => println(f.toList))
     val parsedData = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}"""))
     parsedData
   }
