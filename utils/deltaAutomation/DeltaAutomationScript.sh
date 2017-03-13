@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+FILELOCATION=$1
+PASSWORD=$2
+OUTPUTFILENAME=$3
+
+sbt "run \"${FILELOCATION}\" ${PASSWORD} ${OUTPUTFILENAME}"
