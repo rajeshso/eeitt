@@ -34,15 +34,15 @@ object FileImport extends App{
   printToFile(new File(s"$fileName$currentDateTime.txt")) { p => filteredFile.foreach(p.println) }
 
   def filterBusinessUser(fileString: List[String]): List[String] = {
-    val delFirstLine = fileString.tail
-    val splitString = delFirstLine.map(f => f.split("\\|")).filter(f => !f.contains("select"))
+    val deleteFirstLine = fileString.tail
+    val splitString = deleteFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
     val parsedData = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}"""))
     parsedData
   }
 
   def filterAgentUser(fileString: List[String]): List[String] = {
     val delFirstLine = fileString.tail
-    val splitString = delFirstLine.map(f => f.split("\\|")).filter(f => !f.contains("select"))
+    val splitString = delFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
     val parsedData = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}|${x(12)}|||||||||${x(21)}|${x(22)}"""))
     parsedData
   }
