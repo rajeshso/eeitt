@@ -7,12 +7,13 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-
+import com.typesafe.scalalogging.Logger
 
 /**
   * Created by harrison on 02/03/17.
   */
 object FileImport extends App{
+  val logger = Logger("FileImport")
   val fileLocation: String = args.apply(0)
   val password: String = args.apply(1)
   val myWorkbook = importFile(s"$fileLocation", s"$password")
@@ -20,7 +21,8 @@ object FileImport extends App{
   val splitAgentOrBusiness: List[Array[String]] = fileAsString.map(f => f.split("\\|"))
   val agentOrBusinessUser: String = splitAgentOrBusiness.tail.head.head
   val currentDateTime = Calendar.getInstance.getTime
-
+  logger.info("File Import utility initialized at "+ currentDateTime)
+  logger.info("Received arguments " + args.toList.toString())
 
   val filteredFile: List[String] = agentOrBusinessUser match {
     case "002" => filterAgentUser(fileAsString)
@@ -49,7 +51,11 @@ object FileImport extends App{
     val p = new java.io.PrintWriter(f)
     try {
       op(p)
-    } finally {
+    }catch {
+      case e : Throwable => logger.error(e.getMessage)
+    }
+    finally {
+      logger.info("The output file is "+ f.getAbsoluteFile)
       p.close()
     }
   }
@@ -79,7 +85,7 @@ object FileImport extends App{
     val d: Decryptor = Decryptor.getInstance(info)
 
     if (!d.verifyPassword(s"$password")) {
-      println("unable to process document incorrect password")
+      logger.info("unable to process document incorrect password")
     }
     val wb: XSSFWorkbook = new XSSFWorkbook(d.getDataStream(fs))
 
