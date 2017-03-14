@@ -1,5 +1,5 @@
 import java.io.File
-import java.util.Calendar
+import java.util.{Calendar, Date}
 import java.io.PrintWriter
 
 import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
@@ -15,14 +15,14 @@ import org.apache.poi.ss.usermodel.{Cell, Row}
   * Created by harrison on 02/03/17.
   */
 object FileImport extends App{
-  val logger = Logger("FileImport")
+  val logger : Logger = Logger("FileImport")
   val fileLocation: String = args.apply(0)
   val password: String = args.apply(1)
-  val myWorkbook = importFile(s"$fileLocation", s"$password")
-  val fileAsString = convertFileToString(myWorkbook)
+  val myWorkbook : XSSFWorkbook = importFile(s"$fileLocation", s"$password")
+  val fileAsString : List[String] = convertFileToString(myWorkbook)
   val splitAgentOrBusiness: List[Array[String]] = fileAsString.map(f => f.split("\\|"))
   val agentOrBusinessUser: String = splitAgentOrBusiness.tail.head.head
-  val currentDateTime = Calendar.getInstance.getTime
+  val currentDateTime : Date = Calendar.getInstance.getTime
   logger.info("File Import utility initialized at "+ currentDateTime)
   logger.info("Received arguments " + args.toList.toString())
 
