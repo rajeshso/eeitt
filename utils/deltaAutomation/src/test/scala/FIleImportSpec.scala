@@ -1,3 +1,5 @@
+import java.io.File
+
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.scalatest._
 
@@ -16,10 +18,25 @@ class FIleImportSpec extends FlatSpec with Matchers {
   }
 
   "import password protected file" should "take a file location and a password and return a XSSF Workbook" in {
-    val fileLocation: String = "src/test/resources/TestPasswordProtected.xlsx"
+    val fileName: String = "/TestPasswordProtected.xlsx"
     val filePassword: String = "PASS"
-    val workbook: XSSFWorkbook = FileImport.importFile(fileLocation, filePassword)
+    val path = getClass.getResource(fileName).getPath
+    val file = new File(path)
+    val fileImport = FileImport
+    fileImport.verifyPassword(file.getAbsolutePath, filePassword) shouldBe true
+    val workbook: XSSFWorkbook = fileImport.importPasswordVerifiedFile(file.getAbsolutePath, filePassword)
     workbook shouldBe a[XSSFWorkbook]
+  }
+
+  "An Incorrect password" should "fail the verification test" in {
+    val fileLocation: String = "/TestPasswordProtected.xlsx"
+    val filePassword: String = "BlahBlah"
+    val path = getClass.getResource(fileLocation).getPath
+    val file = new File(path)
+    val fileImport = FileImport
+    fileImport.initLogger
+    val verificationResult: Boolean = fileImport.verifyPassword(file.getAbsolutePath, filePassword)
+    verificationResult shouldBe false
   }
   "Convert file to string" should "take an XSSFWorkbook and return a list of strings" in {
     val workbook: XSSFWorkbook = new XSSFWorkbook()
@@ -31,8 +48,4 @@ class FIleImportSpec extends FlatSpec with Matchers {
       ???
     }*/
 }
-
-
-
-
 

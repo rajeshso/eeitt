@@ -5,6 +5,7 @@ import java.io.PrintWriter
 import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
 import org.apache.poi.xssf.usermodel.{ XSSFSheet, XSSFWorkbook }
+import org.apache.poi.EncryptedDocumentException
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
@@ -14,10 +15,11 @@ import org.apache.poi.ss.usermodel.{ Cell, Row }
 /**
  * Created by harrison on 02/03/17.
  */
+
 object FileImport extends App {
-  val logger: Logger = Logger("FileImport")
+  var logger = Logger("FileImport")
   logger.info("Received arguments " + args.toList.toString())
-  if (args.length<=5) {
+  if (args.length <= 5) {
     logger.error("Incorrect number of arguments supplied. The program exits.")
     System.exit(0)
   }
@@ -28,7 +30,8 @@ object FileImport extends App {
   val password: String = args.apply(4)
   val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
   logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
-  val myWorkbook: XSSFWorkbook = importFile(s"$inputFileLocation//$inputFileName", s"$password")
+  if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
+  val myWorkbook: XSSFWorkbook = importPasswordVerifiedFile(s"$inputFileLocation//$inputFileName", s"$password")
   val fileAsString: List[String] = convertFileToString(myWorkbook)
   val splitAgentOrBusiness: List[Array[String]] = fileAsString.map(f => f.split("\\|"))
   val agentOrBusinessUser: String = splitAgentOrBusiness.tail.head.head
@@ -40,6 +43,18 @@ object FileImport extends App {
   }
 
   printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => filteredFile.foreach(p.println) }
+
+  def printToFile(f: File)(op: PrintWriter => Unit) {
+    val p: PrintWriter = new PrintWriter(f)
+    try {
+      op(p)
+    } catch {
+      case e: Throwable => logger.error(e.getMessage)
+    } finally {
+      logger.info("The output file is " + f.getAbsoluteFile)
+      p.close()
+    }
+  }
 
   def filterBusinessUser(fileString: List[String]): List[String] = {
     val deleteFirstLine: List[String] = fileString.tail
@@ -53,18 +68,6 @@ object FileImport extends App {
     val splitString: List[Array[String]] = delFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
     val parsedData: List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}|${x(12)}|||||||||${x(21)}|${x(22)}"""))
     parsedData
-  }
-
-  def printToFile(f: File)(op: PrintWriter => Unit) {
-    val p: PrintWriter = new PrintWriter(f)
-    try {
-      op(p)
-    } catch {
-      case e: Throwable => logger.error(e.getMessage)
-    } finally {
-      logger.info("The output file is " + f.getAbsoluteFile)
-      p.close()
-    }
   }
 
   def convertFileToString(workBook: XSSFWorkbook): List[String] = {
@@ -86,15 +89,32 @@ object FileImport extends App {
     rowBuffer.toList
   }
 
-  def importFile(fileLocation: String, password: String): XSSFWorkbook = {
-    val fs: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
-    val info: EncryptionInfo = new EncryptionInfo(fs)
-    val d: Decryptor = Decryptor.getInstance(info)
+  def importPasswordVerifiedFile(fileLocation: String, password: String): XSSFWorkbook = {
+    val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
+    val encryptionInfo: EncryptionInfo = new EncryptionInfo(fileSystem)
+    val decryptor: Decryptor = Decryptor.getInstance(encryptionInfo)
+    decryptor.verifyPassword(s"$password")
+    new XSSFWorkbook(decryptor.getDataStream(fileSystem))
+  }
 
-    if (!d.verifyPassword(s"$password")) {
-      logger.info("Unable to process document incorrect password")
+  def verifyPassword(file: String, password: String): Boolean = {
+    val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$file"), true)
+    val encryptionInfo: EncryptionInfo = new EncryptionInfo(fileSystem)
+    val decryptor: Decryptor = Decryptor.getInstance(encryptionInfo)
+    var verificationSuccessful: Boolean = false
+    try {
+      verificationSuccessful = decryptor.verifyPassword(s"$password")
+      if (!verificationSuccessful) {
+        logger.info("Unable to process document - incorrect password")
+      }
+    } catch {
+      case t: Throwable => logger.error(t.getMessage)
     }
-    val wb: XSSFWorkbook = new XSSFWorkbook(d.getDataStream(fs))
-    wb
+    verificationSuccessful
+  }
+
+  //TODO : Refactor this workaround
+  def initLogger : Unit = {
+    logger = Logger("FileImport")
   }
 }
