@@ -1,5 +1,10 @@
+import java.io.{File, PrintWriter}
+
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.scalatest._
+
+import scala.io.Source
+import scala.collection.mutable.ListBuffer
 
 class FIleImportSpec extends FlatSpec with Matchers {
 
@@ -22,17 +27,22 @@ class FIleImportSpec extends FlatSpec with Matchers {
     workbook shouldBe a[XSSFWorkbook]
   }
   "Convert file to string" should "take an XSSFWorkbook and return a list of strings" in {
-    val workbook: XSSFWorkbook = new XSSFWorkbook()
-    val workbookAsString: List[String] = FileImport.convertFileToString(workbook)
+    val fileLocation: String = "src/test/resources/TestPasswordProtected.xlsx"
+    val filePassword: String = "PASS"
+    val myWorkbook: XSSFWorkbook = FileImport.importFile(fileLocation, filePassword)
+    val workbookAsString = FileImport.convertFileToString(myWorkbook)
     workbookAsString shouldBe a [List[_]]
   }
-  /*
-    "print to file" should "take a java file and a method and create a .txt file" in {
-      ???
-    }*/
+
+    "print to file" should "take a java file and create a .txt file" in {
+      val fileName: String = "TestOutputFile"
+      val file = new File(fileName)
+      val writer = new PrintWriter(file)
+      val oneToTen: List[Int] = List.range(1,10)
+      FileImport.printToFile(file){writer => oneToTen.foreach(writer.println)}
+      val i = Source.fromFile(fileName).getLines.flatMap{ line =>
+        line.split(" ").map(_.toInt)}.toList
+      oneToTen should equal(i)
+    }
 }
-
-
-
-
 
