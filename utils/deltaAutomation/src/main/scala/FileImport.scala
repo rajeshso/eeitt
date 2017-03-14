@@ -1,13 +1,15 @@
 import java.io.File
 import java.util.Calendar
+import java.io.PrintWriter
 
 import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.apache.poi.xssf.usermodel.{XSSFSheet, XSSFWorkbook}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
+import org.apache.poi.ss.usermodel.{Cell, Row}
 
 /**
   * Created by harrison on 02/03/17.
@@ -34,21 +36,21 @@ object FileImport extends App{
   printToFile(new File(s"$fileName$currentDateTime.txt")) { p => filteredFile.foreach(p.println) }
 
   def filterBusinessUser(fileString: List[String]): List[String] = {
-    val deleteFirstLine = fileString.tail
-    val splitString = deleteFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
-    val parsedData = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}"""))
+    val deleteFirstLine : List[String] = fileString.tail
+    val splitString : List[Array[String]] = deleteFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
+    val parsedData : List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}"""))
     parsedData
   }
 
   def filterAgentUser(fileString: List[String]): List[String] = {
-    val delFirstLine = fileString.tail
-    val splitString = delFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
-    val parsedData = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}|${x(12)}|||||||||${x(21)}|${x(22)}"""))
+    val delFirstLine : List[String] = fileString.tail
+    val splitString : List[Array[String]] = delFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
+    val parsedData : List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}|${x(12)}|||||||||${x(21)}|${x(22)}"""))
     parsedData
   }
 
-  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit) {
-    val p = new java.io.PrintWriter(f)
+  def printToFile(f: File)(op: PrintWriter => Unit) {
+    val p : PrintWriter = new PrintWriter(f)
     try {
       op(p)
     }catch {
@@ -61,13 +63,13 @@ object FileImport extends App{
   }
 
   def convertFileToString(workBook: XSSFWorkbook): List[String] = {
-    val sheet = myWorkbook.getSheetAt(0)
-    val maxNumOfCells = sheet.getRow(0).getLastCellNum
-    val rows = sheet.rowIterator()
+    val sheet : XSSFSheet = myWorkbook.getSheetAt(0)
+    val maxNumOfCells : Short = sheet.getRow(0).getLastCellNum
+    val rows : Iterator[Row] = sheet.rowIterator()
     val rowBuffer: ListBuffer[String] = ListBuffer.empty[String]
     for (row <- rows) {
-      val cells = row.cellIterator()
-      val listOfCells = for {cell <- 0 to (maxNumOfCells)} yield {
+      val cells : Iterator[Cell] = row.cellIterator()
+      val listOfCells : IndexedSeq[String] = for {cell <- 0 to (maxNumOfCells)} yield {
         if (row.getCell(cell) == null) {
           ""
         } else {
@@ -80,15 +82,14 @@ object FileImport extends App{
   }
 
   def importFile(fileLocation: String, password: String): XSSFWorkbook = {
-    val fs = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
-    val info = new EncryptionInfo(fs)
+    val fs : NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
+    val info : EncryptionInfo = new EncryptionInfo(fs)
     val d: Decryptor = Decryptor.getInstance(info)
 
     if (!d.verifyPassword(s"$password")) {
       logger.info("unable to process document incorrect password")
     }
     val wb: XSSFWorkbook = new XSSFWorkbook(d.getDataStream(fs))
-
     wb
   }
 }
