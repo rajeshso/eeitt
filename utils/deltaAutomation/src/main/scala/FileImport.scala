@@ -17,6 +17,10 @@ import org.apache.poi.ss.usermodel.{ Cell, Row }
 object FileImport extends App {
   val logger: Logger = Logger("FileImport")
   logger.info("Received arguments " + args.toList.toString())
+  if (args.length<=5) {
+    logger.error("Incorrect number of arguments supplied. The program exits.")
+    System.exit(0)
+  }
   val inputFileLocation: String = args.apply(0)
   val outputFileLocation: String = args.apply(1)
   val badFileLocation: String = args.apply(2)
@@ -28,7 +32,6 @@ object FileImport extends App {
   val fileAsString: List[String] = convertFileToString(myWorkbook)
   val splitAgentOrBusiness: List[Array[String]] = fileAsString.map(f => f.split("\\|"))
   val agentOrBusinessUser: String = splitAgentOrBusiness.tail.head.head
-
 
   val filteredFile: List[String] = agentOrBusinessUser match {
     case "002" => filterAgentUser(fileAsString)
