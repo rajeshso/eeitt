@@ -44,13 +44,17 @@ class FIleImportSpec extends FlatSpec with Matchers {
     verificationResult shouldBe false
   }
 
-/*  "Convert file to string" should "take an XSSFWorkbook and return a list of strings" in {
-    val fileLocation: String = "/TestPasswordProtected.xlsx"
+  "Convert file to string" should "take an XSSFWorkbook and return a list of strings" in {
+    val fileName: String = "/TestPasswordProtected.xlsx"
     val filePassword: String = "PASS"
-    val myWorkbook: XSSFWorkbook = FileImport.importPasswordVerifiedFile(fileLocation, filePassword)
+    val path = getClass.getResource(fileName).getPath
+    val file = new File(path)
+    val fileImport = FileImport
+    fileImport.initLogger
+    val myWorkbook: XSSFWorkbook = fileImport.importPasswordVerifiedFile(file.getAbsolutePath, filePassword)
     val workbookAsString = FileImport.convertFileToString(myWorkbook)
     workbookAsString shouldBe a[List[_]]
-  }*/
+  }
 
 
 

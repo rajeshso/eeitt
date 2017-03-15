@@ -65,7 +65,7 @@ object FileImport extends App {
   }
 
   def convertFileToString(workBook: XSSFWorkbook): List[String] = {
-    val sheet: XSSFSheet = myWorkbook.getSheetAt(0)
+    val sheet: XSSFSheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
     val rows: Iterator[Row] = sheet.rowIterator()
     val rowBuffer: ListBuffer[String] = ListBuffer.empty[String]
