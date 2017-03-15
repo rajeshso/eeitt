@@ -1,5 +1,7 @@
 import java.io.{ File, PrintWriter }
 import java.util.Calendar
+import java.nio.file.{ Files, Path, Paths }
+import java.nio.file.Files._
 
 import com.typesafe.scalalogging.Logger
 import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
@@ -80,6 +82,46 @@ trait FileImportTrait {
     }
     verificationSuccessful
   }
+
+  def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
+    val path: Path = Paths.get(fileLocation)
+    if (!exists(path) || !isDirectory(path)) {
+      logger.error(s"Invalid filelocation in $fileLocation - The program exits")
+      return false
+    }
+    if (read && !isReadable(path)) {
+      logger.error(s"Unable to read from $fileLocation - The program exits")
+      return false
+    }
+    if (write && !isWritable(path)) {
+      logger.error(s"Unable to write to $fileLocation - The program exits")
+      return false
+    }
+    return true
+  }
+  def isValidFile(file: String): Boolean = {
+    val path: Path = Paths.get(file)
+    if (!exists(path) || !isRegularFile(path)) {
+      logger.error(s"Invalid filelocation in $file - The program exits")
+      return false
+    }
+    if (!isReadable(path)) {
+      logger.error(s"Unable to read from $file - The program exits")
+      return false
+    }
+    if (!Files.probeContentType(path).equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+      logger.error(s"Incorrent File Content in $file - The program exits")
+      return false
+    }
+    try {
+      new NPOIFSFileSystem(new File(s"$file"), true)
+    } catch {
+      case e: Throwable =>
+        logger.error(s"Incorrent File Content in $file ${e.getMessage}- The program exits")
+        return false
+    }
+    return true
+  }
 }
 
 object FileImport extends App with FileImportTrait {
@@ -96,6 +138,10 @@ object FileImport extends App with FileImportTrait {
   val password: String = args.apply(4)
   val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
   logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+  if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
+  if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
+  if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
+  if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
   if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
   val myWorkbook: XSSFWorkbook = importPasswordVerifiedFile(s"$inputFileLocation//$inputFileName", s"$password")
   val fileAsString: List[String] = convertFileToString(myWorkbook)
@@ -110,8 +156,7 @@ object FileImport extends App with FileImportTrait {
 
   printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => filteredFile.foreach(p.println) }
 
-  //TODO : Refactor this workaround
-  def initLogger: Unit = {
-    logger = Logger("FileImport")
+  def reInitLogger(testLogger: Logger): Unit = {
+    logger = testLogger
   }
 }

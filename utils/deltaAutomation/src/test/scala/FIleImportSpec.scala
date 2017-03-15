@@ -1,14 +1,15 @@
 
 import java.io.{File, PrintWriter}
-
+import java.nio.file.{Path, Paths}
 
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.scalatest._
+import com.typesafe.scalalogging.Logger
 
 import scala.io.Source
 import scala.collection.mutable.ListBuffer
 
-class FIleImportSpec extends FlatSpec with Matchers {
+class FIleImportSpec extends FlatSpec with Matchers  {
 
   "filter business user" should "strip the headers from the file and output only the wanted fields of data into the file" in {
     val businessUserData: List[String] = List("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|", "001|XPGD0000010088|ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
@@ -34,14 +35,25 @@ class FIleImportSpec extends FlatSpec with Matchers {
   }
 
   "An Incorrect password" should "fail the verification test" in {
-    val fileLocation: String = "/TestPasswordProtected.xlsx"
+    val fileName: String = "/TestPasswordProtected.xlsx"
     val filePassword: String = "BlahBlah"
-    val path = getClass.getResource(fileLocation).getPath
+    val path = getClass.getResource(fileName).getPath
     val file = new File(path)
     val fileImport = FileImport
-    fileImport.initLogger
+    fileImport.reInitLogger(Logger("TestFileImport"))
     val verificationResult: Boolean = fileImport.verifyPassword(file.getAbsolutePath, filePassword)
     verificationResult shouldBe false
+  }
+
+  "A Correct password" should "pass the verification test" in {
+    val fileName: String = "/TestPasswordProtected.xlsx"
+    val filePassword: String = "PASS"
+    val path = getClass.getResource(fileName).getPath
+    val file = new File(path)
+    val fileImport = FileImport
+    fileImport.reInitLogger(Logger("TestFileImport"))
+    val verificationResult: Boolean = fileImport.verifyPassword(file.getAbsolutePath, filePassword)
+    verificationResult shouldBe true
   }
 
   "Convert file to string" should "take an XSSFWorkbook and return a list of strings" in {
@@ -50,24 +62,58 @@ class FIleImportSpec extends FlatSpec with Matchers {
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
     val fileImport = FileImport
-    fileImport.initLogger
+    fileImport.reInitLogger(Logger("TestFileImport"))
     val myWorkbook: XSSFWorkbook = fileImport.importPasswordVerifiedFile(file.getAbsolutePath, filePassword)
     val workbookAsString = FileImport.convertFileToString(myWorkbook)
     workbookAsString shouldBe a[List[_]]
   }
 
+  "print to file" should "take a java file and create a .txt file" in {
+     val fileName: String = "TestOutputFile"
+     val file = new File(fileName)
+     val writer = new PrintWriter(file)
+     val oneToTen: List[Int] = List.range(1,10)
+     FileImport.printToFile(file){writer => oneToTen.foreach(writer.println)}
+     val i = Source.fromFile(fileName).getLines.flatMap{ line =>
+       line.split(" ").map(_.toInt)}.toList
+     oneToTen should equal(i)
+     file.delete()
+  }
 
-
-    "print to file" should "take a java file and create a .txt file" in {
-      val fileName: String = "TestOutputFile"
-      val file = new File(fileName)
-      val writer = new PrintWriter(file)
-      val oneToTen: List[Int] = List.range(1,10)
-      FileImport.printToFile(file){writer => oneToTen.foreach(writer.println)}
-      val i = Source.fromFile(fileName).getLines.flatMap{ line =>
-        line.split(" ").map(_.toInt)}.toList
-      oneToTen should equal(i)
-      file.delete()
-    }
+  "A valid file location" should "be verified and returned true" in {
+    val path = getClass.getResource("").getPath
+    val fileImport = FileImport
+    fileImport.reInitLogger(Logger("TestFileImport"))
+    fileImport.isValidFileLocation(path,true, false) shouldBe true
+  }
+  "An Invalid file location" should "be verified and returned false" in {
+    val inValidpath = "//ABC//DEF//GHI"
+    val fileImport = FileImport
+    fileImport.reInitLogger(Logger("TestFileImport"))
+    fileImport.isValidFileLocation(inValidpath,true, false) shouldBe false
+  }
+  "A file with invalid content " should "be verified and returned false" in {
+    val fileName: String = "/InvalidContentNonXLSX.xlsx"
+    val path = getClass.getResource(fileName).getPath
+    val file = new File(path)
+    val fileImport = FileImport
+    fileImport.reInitLogger(Logger("TestFileImport"))
+    fileImport.isValidFile(file.getAbsolutePath) shouldBe false
+  }
+  "A directory path" should "not be considered a file, be verified and returned false" in {
+    val path = getClass.getResource("").getPath
+    val file = new File(path)
+    val fileImport = FileImport
+    fileImport.reInitLogger(Logger("TestFileImport"))
+    fileImport.isValidFile(file.getAbsolutePath) shouldBe false
+  }
+  "A valid file with invalid extension " should "be verified and returned false" in {
+    val fileName: String = "/ValidFileWithIncorrectExtension.txt"
+    val path = getClass.getResource(fileName).getPath
+    val file = new File(path)
+    val fileImport = FileImport
+    fileImport.reInitLogger(Logger("TestFileImport"))
+    fileImport.isValidFile(file.getAbsolutePath) shouldBe false
+  }
 }
 
