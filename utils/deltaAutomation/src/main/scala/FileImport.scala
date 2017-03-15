@@ -45,7 +45,7 @@ object FileImport extends App {
     } catch {
       case e: Throwable => logger.error(e.getMessage)
     } finally {
-//      logger.info("The output file is " + f.getAbsoluteFile)
+      logger.info("The output file is " + f.getAbsoluteFile)
       p.close()
     }
   }
@@ -71,7 +71,7 @@ object FileImport extends App {
     val rowBuffer: ListBuffer[String] = ListBuffer.empty[String]
     for (row <- rows) {
       val cells: Iterator[Cell] = row.cellIterator()
-      val listOfCells: IndexedSeq[String] = for { cell <- 0 to (maxNumOfCells) } yield {
+      val listOfCells: IndexedSeq[String] = for {cell <- 0 to (maxNumOfCells)} yield {
         if (row.getCell(cell) == null) {
           ""
         } else {
@@ -83,7 +83,7 @@ object FileImport extends App {
     rowBuffer.toList
   }
 
-    def importPasswordVerifiedFile(fileLocation: String, password: String): XSSFWorkbook = {
+  def importPasswordVerifiedFile(fileLocation: String, password: String): XSSFWorkbook = {
     val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
     val encryptionInfo: EncryptionInfo = new EncryptionInfo(fileSystem)
     val decryptor: Decryptor = Decryptor.getInstance(encryptionInfo)
@@ -108,7 +108,7 @@ object FileImport extends App {
   }
 
   //TODO : Refactor this workaround
-  def initLogger : Unit = {
+  def initLogger: Unit = {
     logger = Logger("FileImport")
   }
 }
