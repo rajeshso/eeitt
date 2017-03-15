@@ -6,7 +6,7 @@ BADFILELOCATION=$3
 INPUTFILENAME=$4
 PASSWORD=$5
 
-if [ $# -eq 6 ]
+if [ $# -eq 5 ]
   then
     sbt "run \"${INPUTFILELOCATION}\" \"${OUTPUTFILELOCATION}\" \"${BADFILELOCATION}\" \"${INPUTFILENAME}\" \"${PASSWORD}\""
   else

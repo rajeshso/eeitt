@@ -1,11 +1,11 @@
-import java.io.{File, PrintWriter}
+import java.io.{ File, PrintWriter }
 import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
+import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row}
-import org.apache.poi.xssf.usermodel.{XSSFSheet, XSSFWorkbook}
+import org.apache.poi.ss.usermodel.{ Cell, Row }
+import org.apache.poi.xssf.usermodel.{ XSSFSheet, XSSFWorkbook }
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
@@ -13,7 +13,7 @@ import scala.collection.mutable.ListBuffer
 object FileImport extends App {
   var logger = Logger("FileImport")
   logger.info("Received arguments " + args.toList.toString())
-  if (args.length <= 5) {
+  if (args.length < 5) {
     logger.error("Incorrect number of arguments supplied. The program exits.")
     System.exit(0)
   }
@@ -45,7 +45,7 @@ object FileImport extends App {
     } catch {
       case e: Throwable => logger.error(e.getMessage)
     } finally {
-//      logger.info("The output file is " + f.getAbsoluteFile)
+      //      logger.info("The output file is " + f.getAbsoluteFile)
       p.close()
     }
   }
@@ -65,7 +65,7 @@ object FileImport extends App {
   }
 
   def convertFileToString(workBook: XSSFWorkbook): List[String] = {
-    val sheet: XSSFSheet = myWorkbook.getSheetAt(0)
+    val sheet: XSSFSheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
     val rows: Iterator[Row] = sheet.rowIterator()
     val rowBuffer: ListBuffer[String] = ListBuffer.empty[String]
@@ -83,7 +83,7 @@ object FileImport extends App {
     rowBuffer.toList
   }
 
-    def importPasswordVerifiedFile(fileLocation: String, password: String): XSSFWorkbook = {
+  def importPasswordVerifiedFile(fileLocation: String, password: String): XSSFWorkbook = {
     val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
     val encryptionInfo: EncryptionInfo = new EncryptionInfo(fileSystem)
     val decryptor: Decryptor = Decryptor.getInstance(encryptionInfo)
@@ -108,7 +108,7 @@ object FileImport extends App {
   }
 
   //TODO : Refactor this workaround
-  def initLogger : Unit = {
+  def initLogger: Unit = {
     logger = Logger("FileImport")
   }
 }
