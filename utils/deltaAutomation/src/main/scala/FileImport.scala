@@ -1,42 +1,17 @@
-import java.io.{File, PrintWriter}
+import java.io.{ File, PrintWriter }
 import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
+import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row}
-import org.apache.poi.xssf.usermodel.{XSSFSheet, XSSFWorkbook}
+import org.apache.poi.ss.usermodel.{ Cell, Row }
+import org.apache.poi.xssf.usermodel.{ XSSFSheet, XSSFWorkbook }
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 
-object FileImport extends App {
+trait FileImportTrait {
   var logger = Logger("FileImport")
-  logger.info("Received arguments " + args.toList.toString())
-  if (args.length < 5) {
-    logger.error("Incorrect number of arguments supplied. The program exits.")
-    System.exit(0)
-  }
-  val inputFileLocation: String = args.apply(0)
-  val outputFileLocation: String = args.apply(1)
-  val badFileLocation: String = args.apply(2)
-  val inputFileName: String = args.apply(3)
-  val password: String = args.apply(4)
-  val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-  logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
-  if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
-  val myWorkbook: XSSFWorkbook = importPasswordVerifiedFile(s"$inputFileLocation//$inputFileName", s"$password")
-  val fileAsString: List[String] = convertFileToString(myWorkbook)
-  val splitAgentOrBusiness: List[Array[String]] = fileAsString.map(f => f.split("\\|"))
-  val agentOrBusinessUser: String = splitAgentOrBusiness.tail.head.head
-
-  val filteredFile: List[String] = agentOrBusinessUser match {
-    case "002" => filterAgentUser(fileAsString)
-    case "001" => filterBusinessUser(fileAsString)
-    case _ => null
-  }
-
-  printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => filteredFile.foreach(p.println) }
 
   def printToFile(f: File)(op: PrintWriter => Unit) {
     val p: PrintWriter = new PrintWriter(f)
@@ -82,8 +57,7 @@ object FileImport extends App {
     }
     rowBuffer.toList
   }
-
-    def importPasswordVerifiedFile(fileLocation: String, password: String): XSSFWorkbook = {
+  def importPasswordVerifiedFile(fileLocation: String, password: String): XSSFWorkbook = {
     val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
     val encryptionInfo: EncryptionInfo = new EncryptionInfo(fileSystem)
     val decryptor: Decryptor = Decryptor.getInstance(encryptionInfo)
@@ -106,6 +80,35 @@ object FileImport extends App {
     }
     verificationSuccessful
   }
+}
+
+object FileImport extends App with FileImportTrait {
+
+  logger.info("Received arguments " + args.toList.toString())
+  if (args.length < 5) {
+    logger.error("Incorrect number of arguments supplied. The program exits.")
+    System.exit(0)
+  }
+  val inputFileLocation: String = args.apply(0)
+  val outputFileLocation: String = args.apply(1)
+  val badFileLocation: String = args.apply(2)
+  val inputFileName: String = args.apply(3)
+  val password: String = args.apply(4)
+  val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
+  logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+  if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
+  val myWorkbook: XSSFWorkbook = importPasswordVerifiedFile(s"$inputFileLocation//$inputFileName", s"$password")
+  val fileAsString: List[String] = convertFileToString(myWorkbook)
+  val splitAgentOrBusiness: List[Array[String]] = fileAsString.map(f => f.split("\\|"))
+  val agentOrBusinessUser: String = splitAgentOrBusiness.tail.head.head
+
+  val filteredFile: List[String] = agentOrBusinessUser match {
+    case "002" => filterAgentUser(fileAsString)
+    case "001" => filterBusinessUser(fileAsString)
+    case _ => null
+  }
+
+  printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => filteredFile.foreach(p.println) }
 
   //TODO : Refactor this workaround
   def initLogger: Unit = {
