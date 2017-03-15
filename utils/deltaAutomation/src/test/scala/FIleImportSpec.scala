@@ -63,6 +63,7 @@ class FIleImportSpec extends FlatSpec with Matchers {
       val i = Source.fromFile(fileName).getLines.flatMap{ line =>
         line.split(" ").map(_.toInt)}.toList
       oneToTen should equal(i)
+      file.delete()
     }
 }
 
