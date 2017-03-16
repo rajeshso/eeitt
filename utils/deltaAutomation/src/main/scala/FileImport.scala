@@ -124,39 +124,41 @@ trait FileImportTrait {
   }
 }
 
-object FileImport extends App with FileImportTrait {
+object FileImport extends FileImportTrait {
+  def main(args: Array[String]): Unit = {
 
-  logger.info("Received arguments " + args.toList.toString())
-  if (args.length < 5) {
-    logger.error("Incorrect number of arguments supplied. The program exits.")
-    System.exit(0)
+    logger.info(s"Received ${args.toList.length} arguments in ${args.toList.toString}")
+    if (args.length < 5) {
+      logger.error("Incorrect number of arguments supplied. The program exits.")
+      System.exit(0)
+    }
+    val inputFileLocation: String = args.apply(0)
+    val outputFileLocation: String = args.apply(1)
+    val badFileLocation: String = args.apply(2)
+    val inputFileName: String = args.apply(3)
+    val password: String = args.apply(4)
+    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
+    logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+    if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
+    if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
+    if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
+    if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
+    if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
+    val myWorkbook: XSSFWorkbook = importPasswordVerifiedFile(s"$inputFileLocation//$inputFileName", s"$password")
+    val fileAsString: List[String] = convertFileToString(myWorkbook)
+    val splitAgentOrBusiness: List[Array[String]] = fileAsString.map(f => f.split("\\|"))
+    val agentOrBusinessUser: String = splitAgentOrBusiness.tail.head.head
+
+    val filteredFile: List[String] = agentOrBusinessUser match {
+      case "002" => filterAgentUser(fileAsString)
+      case "001" => filterBusinessUser(fileAsString)
+      case _ => null
+    }
+
+    printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => filteredFile.foreach(p.println) }
   }
-  val inputFileLocation: String = args.apply(0)
-  val outputFileLocation: String = args.apply(1)
-  val badFileLocation: String = args.apply(2)
-  val inputFileName: String = args.apply(3)
-  val password: String = args.apply(4)
-  val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-  logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
-  if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
-  if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
-  if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
-  if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
-  if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
-  val myWorkbook: XSSFWorkbook = importPasswordVerifiedFile(s"$inputFileLocation//$inputFileName", s"$password")
-  val fileAsString: List[String] = convertFileToString(myWorkbook)
-  val splitAgentOrBusiness: List[Array[String]] = fileAsString.map(f => f.split("\\|"))
-  val agentOrBusinessUser: String = splitAgentOrBusiness.tail.head.head
-
-  val filteredFile: List[String] = agentOrBusinessUser match {
-    case "002" => filterAgentUser(fileAsString)
-    case "001" => filterBusinessUser(fileAsString)
-    case _ => null
-  }
-
-  printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => filteredFile.foreach(p.println) }
-
   def reInitLogger(testLogger: Logger): Unit = {
     logger = testLogger
   }
+
 }
