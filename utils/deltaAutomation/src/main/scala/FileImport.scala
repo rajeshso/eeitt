@@ -25,17 +25,29 @@ trait FileImportTrait {
     }
   }
 
-  def filterBusinessUser(fileString: List[String]): List[String] = {
+  def filterBusinessUser(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): List[String] = {
     val deleteFirstLine: List[String] = fileString.tail
-    val splitString: List[Array[String]] = deleteFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
+    val (splitString, badRecord): (List[Array[String]], List[Array[String]]) = deleteFirstLine.map(f => f.split("\\|")).partition(f => !(f(1) == "" || f(1) == "select"))
     val parsedData: List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}"""))
+    val badRecordParsed: List[String] = badRecord.map(x => (s"""${x.toList}"""))
+    printToFile(new File(s"$badFileLocation//$currentDateTime$inputFileName.txt")) { p => badRecordParsed.foreach(p.println) }
     parsedData
   }
 
-  def filterAgentUser(fileString: List[String]): List[String] = {
-    val delFirstLine: List[String] = fileString.tail
-    val splitString: List[Array[String]] = delFirstLine.map(f => f.split("\\|")).filter(f => !(f(1) == "" || f(1) == "select"))
+  def filterAgentUser(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): List[String] = {
+
+    val deleteFirstLine: List[String] = fileString.tail
+    val (splitString, badRecord): (List[Array[String]], List[Array[String]]) = deleteFirstLine.map(f => f.split("\\|")).partition(f => !(f(1) == "" || f(1) == "select"))
     val parsedData: List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}|${x(12)}|||||||||${x(21)}|${x(22)}"""))
+    val badRecordParsed: List[String] = badRecord.map(x => (s"""${x.toList}"""))
+    printToFile(new File(s"$badFileLocation//$currentDateTime$inputFileName.txt")) { p => badRecordParsed.foreach(p.println) }
+    parsedData
+  }
+
+  def filterBadFile(fileString: List[String]): List[String] = {
+    val deleteFirstLine: List[String] = fileString.tail
+    val splitString: List[Array[String]] = deleteFirstLine.map(f => f.split("\\|"))
+    val parsedData: List[String] = splitString.map(x => (s"""${x.toList}"""))
     parsedData
   }
 
@@ -103,8 +115,8 @@ object FileImport extends App with FileImportTrait {
   val agentOrBusinessUser: String = splitAgentOrBusiness.tail.head.head
 
   val filteredFile: List[String] = agentOrBusinessUser match {
-    case "002" => filterAgentUser(fileAsString)
-    case "001" => filterBusinessUser(fileAsString)
+    case "002" => filterAgentUser(fileAsString, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    case "001" => filterBusinessUser(fileAsString, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     case _ => null
   }
 
