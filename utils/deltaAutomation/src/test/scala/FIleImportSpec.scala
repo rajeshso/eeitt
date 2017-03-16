@@ -19,7 +19,7 @@ class FIleImportSpec extends FlatSpec with Matchers {
     val badFileLocation: String = "src/test/"
     val inputFileName: String = "testFile"
     val businessUserData: List[String] = List("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|", "001|XPGD0000010088|ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
-    val parsedBusinessUser = FileImport.filterBusinessUser(businessUserData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val parsedBusinessUser = FileImport.BusinessU.partitionUserAndNonUserRecords(businessUserData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     val fileContents = Source.fromFile(outputFileLocation + currentDateTime + inputFileName + ".txt").getLines()
     fileContents.toList should be(List("001|XPGD0000010088|||||||||BN12 4XL|GB"))
     new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
@@ -32,7 +32,7 @@ class FIleImportSpec extends FlatSpec with Matchers {
     val badFileLocation: String = "src/test/"
     val inputFileName: String = "testFile"
     val agentData: List[String] = List("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|", "002|ZARN0000627|ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
-    val parsedAgentData = FileImport.filterAgentUser(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val parsedAgentData = FileImport.AgentU.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     val fileContents = Source.fromFile(outputFileLocation + currentDateTime + inputFileName + ".txt").getLines()
     fileContents.toList should be(List("002|ZARN0000627|||||||||BN12 4XL|GB|XAAP00000000007||||||||||non"))
     new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
@@ -46,7 +46,7 @@ class FIleImportSpec extends FlatSpec with Matchers {
     val file = new File(path)
     val fileImport = FileImport
     fileImport.verifyPassword(file.getAbsolutePath, filePassword) shouldBe true
-    val workbook: XSSFWorkbook = fileImport.importPasswordVerifiedFile(file.getAbsolutePath, filePassword)
+    val workbook: XSSFWorkbook = fileImport.getPasswordVerifiedFileAsWorkbook(file.getAbsolutePath, filePassword)
     workbook shouldBe a[XSSFWorkbook]
   }
 
@@ -79,8 +79,8 @@ class FIleImportSpec extends FlatSpec with Matchers {
     val file = new File(path)
     val fileImport = FileImport
     fileImport.reInitLogger(Logger("TestFileImport"))
-    val myWorkbook: XSSFWorkbook = fileImport.importPasswordVerifiedFile(file.getAbsolutePath, filePassword)
-    val workbookAsString = FileImport.convertFileToString(myWorkbook)
+    val myWorkbook: XSSFWorkbook = fileImport.getPasswordVerifiedFileAsWorkbook(file.getAbsolutePath, filePassword)
+    val workbookAsString = FileImport.readLines(myWorkbook)
     workbookAsString shouldBe a[List[_]]
   }
 

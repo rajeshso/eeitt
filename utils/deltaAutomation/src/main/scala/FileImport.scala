@@ -27,24 +27,6 @@ trait FileImportTrait {
     }
   }
 
-  def filterBusinessUser(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
-    val deleteFirstLine: List[String] = fileString.tail
-    val (splitString, badRecord): (List[Array[String]], List[Array[String]]) = deleteFirstLine.map(f => f.split("\\|")).partition(f => !(f(1) == "" || f(1) == "select"))
-    val parsedData: List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}"""))
-    val badRecordParsed: List[String] = badRecord.map(x => (s"""${x.toList}"""))
-    printToFile(new File(s"$badFileLocation//$currentDateTime$inputFileName.txt")) { p => badRecordParsed.foreach(p.println) }
-    printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => parsedData.foreach(p.println) }
-  }
-
-  def filterAgentUser(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
-    val deleteFirstLine: List[String] = fileString.tail
-    val (splitString, badRecord): (List[Array[String]], List[Array[String]]) = deleteFirstLine.map(f => f.split("\\|")).partition(f => !(f(1) == "" || f(1) == "select"))
-    val parsedData: List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}|${x(12)}|||||||||${x(21)}|${x(22)}"""))
-    val badRecordParsed: List[String] = badRecord.map(x => (s"""${x.toList}"""))
-    printToFile(new File(s"$badFileLocation//$currentDateTime$inputFileName.txt")) { p => badRecordParsed.foreach(p.println) }
-    printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => parsedData.foreach(p.println) }
-  }
-
   def filterBadFile(fileString: List[String]): List[String] = {
     val deleteFirstLine: List[String] = fileString.tail
     val splitString: List[Array[String]] = deleteFirstLine.map(f => f.split("\\|"))
@@ -52,7 +34,7 @@ trait FileImportTrait {
     parsedData
   }
 
-  def convertFileToString(workBook: XSSFWorkbook): List[String] = {
+  def readLines(workBook: XSSFWorkbook): List[String] = {
     val sheet: XSSFSheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
     val rows: Iterator[Row] = sheet.rowIterator()
@@ -70,7 +52,8 @@ trait FileImportTrait {
     }
     rowBuffer.toList
   }
-  def importPasswordVerifiedFile(fileLocation: String, password: String): XSSFWorkbook = {
+
+  def getPasswordVerifiedFileAsWorkbook(fileLocation: String, password: String): XSSFWorkbook = {
     val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
     val encryptionInfo: EncryptionInfo = new EncryptionInfo(fileSystem)
     val decryptor: Decryptor = Decryptor.getInstance(encryptionInfo)
@@ -110,6 +93,7 @@ trait FileImportTrait {
     }
     return true
   }
+
   def isValidFile(file: String): Boolean = {
     val path: Path = Paths.get(file)
     if (!exists(path) || !isRegularFile(path)) {
@@ -133,6 +117,53 @@ trait FileImportTrait {
     }
     return true
   }
+
+  def getUser(userIdIndicator: String) : User = {
+    userIdIndicator match {
+      case BusinessU.name => BusinessU
+      case AgentU.name => AgentU
+      case _ => UnknownU
+    }
+  }
+
+  sealed trait User {
+    val name: String
+    def partitionUserAndNonUserRecords(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit
+  }
+
+  case object BusinessU extends User {
+    val name: String = "001"
+
+    override def partitionUserAndNonUserRecords(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
+      val deleteFirstLine: List[String] = fileString.tail
+      val (splitString, badRecord): (List[Array[String]], List[Array[String]]) = deleteFirstLine.map(f => f.split("\\|")).partition(f => !(f(1) == "" || f(1) == "select"))
+      val parsedData: List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}"""))
+      val badRecordParsed: List[String] = badRecord.map(x => (s"""${x.toList}"""))
+      printToFile(new File(s"$badFileLocation//$currentDateTime$inputFileName.txt")) { p => badRecordParsed.foreach(p.println) }
+      printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => parsedData.foreach(p.println) }
+    }
+  }
+
+  case object AgentU extends User {
+    val name: String = "002"
+
+    override def partitionUserAndNonUserRecords(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
+      val deleteFirstLine: List[String] = fileString.tail
+      val (splitString, badRecord): (List[Array[String]], List[Array[String]]) = deleteFirstLine.map(f => f.split("\\|")).partition(f => !(f(1) == "" || f(1) == "select"))
+      val parsedData: List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}|${x(12)}|||||||||${x(21)}|${x(22)}"""))
+      val badRecordParsed: List[String] = badRecord.map(x => (s"""${x.toList}"""))
+      printToFile(new File(s"$badFileLocation//$currentDateTime$inputFileName.txt")) { p => badRecordParsed.foreach(p.println) }
+      printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => parsedData.foreach(p.println) }
+    }
+  }
+
+  case object UnknownU extends User {
+    val name: String = "***"
+
+    override def partitionUserAndNonUserRecords(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
+      logger.info("An unrecognised file type has been encountered please see the bad output folder")
+    }
+  }
 }
 
 object FileImport extends FileImportTrait {
@@ -150,20 +181,21 @@ object FileImport extends FileImportTrait {
     val password: String = args.apply(4)
     val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
     logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+    validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
+    val workbook: XSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName", s"$password")
+    val lineList: List[String] = readLines(workbook)
+    val linesAndRecordsAsListOfList: List[Array[String]] = lineList.map(line => line.split("\\|"))
+    val userIdIndicator: String = linesAndRecordsAsListOfList.tail.head.head
+    val user: FileImport.User = getUser(userIdIndicator)
+    user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+  }
+
+  private def validateInput(inputFileLocation: String, outputFileLocation: String, badFileLocation: String, inputFileName: String, password: String) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
     if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
     if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
-    val myWorkbook: XSSFWorkbook = importPasswordVerifiedFile(s"$inputFileLocation//$inputFileName", s"$password")
-    val fileAsString: List[String] = convertFileToString(myWorkbook)
-    val splitAgentOrBusiness: List[Array[String]] = fileAsString.map(f => f.split("\\|"))
-    val agentOrBusinessUser: String = splitAgentOrBusiness.tail.head.head
-    val filteredFile = agentOrBusinessUser match {
-      case "002" => filterAgentUser(fileAsString, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-      case "001" => filterBusinessUser(fileAsString, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-      case _ => logger.info("An unrecognised file type has been encountered please see the bad output folder")
-    }
   }
 
   def reInitLogger(testLogger: Logger): Unit = {
