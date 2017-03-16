@@ -165,6 +165,7 @@ object FileImport extends FileImportTrait {
       case _ => logger.info("An unrecognised file type has been encountered please see the bad output folder")
     }
   }
+
   def reInitLogger(testLogger: Logger): Unit = {
     logger = testLogger
   }
