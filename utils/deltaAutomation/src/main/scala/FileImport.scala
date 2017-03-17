@@ -124,49 +124,54 @@ trait FileImportTrait {
 
   def getUser(userIdIndicator: CellValue) : User = {
     userIdIndicator match {
-      case BusinessU.name => BusinessU
-      case AgentU.name => AgentU
-      case _ => UnknownU
+      case BusinessUser.name => BusinessUser
+      case AgentUser.name => AgentUser
+      case _ => UnsupportedUser
     }
   }
 
   sealed trait User {
     val name: String
-    def partitionUserAndNonUserRecords(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit
+    def partitionUserAndNonUserRecords(rowsList: List[RowString], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit
   }
 
-  case object BusinessU extends User {
+  case object BusinessUser extends User {
     val name: String = "001"
 
-    override def partitionUserAndNonUserRecords(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
-      val deleteFirstLine: List[String] = fileString.tail
-      val (splitString, badRecord): (List[Array[String]], List[Array[String]]) = deleteFirstLine.map(f => f.split("\\|")).partition(f => !(f(1) == "" || f(1) == "select"))
-      val parsedData: List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}"""))
-      val badRecordParsed: List[String] = badRecord.map(x => (s"""${x.toList}"""))
-      printToFile(new File(s"$badFileLocation//$currentDateTime$inputFileName.txt")) { p => badRecordParsed.foreach(p.println) }
-      printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => parsedData.foreach(p.println) }
+    override def partitionUserAndNonUserRecords(rowsList: List[RowString], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
+      val rowsListExceptHeader: List[RowString] = rowsList.tail
+      val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString => rowString.split("\\|")).partition(cellArray => !(cellArray(1) == "" || cellArray(1) == "select"))
+      val goodRowsList: List[RowString] = goodRows.map(cellsArray => (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}"""))
+      val badRowsList: List[RowString] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
+      val fileName : String = currentDateTime+inputFileName+".txt"
+      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
     }
   }
 
-  case object AgentU extends User {
+  case object AgentUser extends User {
     val name: String = "002"
 
-    override def partitionUserAndNonUserRecords(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
-      val deleteFirstLine: List[String] = fileString.tail
-      val (splitString, badRecord): (List[Array[String]], List[Array[String]]) = deleteFirstLine.map(f => f.split("\\|")).partition(f => !(f(1) == "" || f(1) == "select"))
-      val parsedData: List[String] = splitString.map(x => (s"""${x(0)}|${x(1)}|||||||||${x(10)}|${x(11)}|${x(12)}|||||||||${x(21)}|${x(22)}"""))
-      val badRecordParsed: List[String] = badRecord.map(x => (s"""${x.toList}"""))
-      printToFile(new File(s"$badFileLocation//$currentDateTime$inputFileName.txt")) { p => badRecordParsed.foreach(p.println) }
-      printToFile(new File(s"$outputFileLocation//$currentDateTime$inputFileName.txt")) { p => parsedData.foreach(p.println) }
+    override def partitionUserAndNonUserRecords(rowsList: List[RowString], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
+      val rowsListExceptHeader: List[RowString] = rowsList.tail
+      val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString => rowString.split("\\|")).partition(cellArray => !(cellArray(1) == "" || cellArray(1) == "select"))
+      val goodRowsList: List[String] = goodRows.map(cellsArray => (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}|${cellsArray(12)}|||||||||${cellsArray(21)}|${cellsArray(22)}"""))
+      val badRowsList: List[String] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
+      val fileName : String = currentDateTime+inputFileName+".txt"
+      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
     }
   }
 
-  case object UnknownU extends User {
+  case object UnsupportedUser extends User {
     val name: String = "***"
 
-    override def partitionUserAndNonUserRecords(fileString: List[String], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
+    override def partitionUserAndNonUserRecords(fileString: List[RowString], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
       logger.info("An unrecognised file type has been encountered please see the bad output folder")
     }
+  }
+
+  protected def write(outputFileLocation: String, badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String): Unit = {
+    printToFile(new File(s"$badFileLocation//$fileName")) { rowString => badRowsList.foreach(rowString.println) }
+    printToFile(new File(s"$outputFileLocation//$fileName")) { rowString => goodRowsList.foreach(rowString.println) }
   }
 }
 
