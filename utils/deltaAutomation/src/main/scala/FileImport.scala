@@ -31,13 +31,6 @@ trait FileImportTrait {
     }
   }
 
-  def filterBadFile(fileString: List[String]): List[String] = {
-    val deleteFirstLine: List[String] = fileString.tail
-    val splitString: List[Array[String]] = deleteFirstLine.map(f => f.split("\\|"))
-    val parsedData: List[String] = splitString.map(x => (s"""${x.toList}"""))
-    parsedData
-  }
-
   def readRows(workBook: XSSFWorkbook): List[RowString] = {
     val sheet: XSSFSheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
@@ -145,6 +138,8 @@ trait FileImportTrait {
       val badRowsList: List[RowString] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
       val fileName : String = currentDateTime+inputFileName+".txt"
       write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
+      logger.info("Succesful records parsed:" + goodRowsList.length)
+      logger.info("Unsuccesful records parsed:" + badRowsList.length)
     }
   }
 
@@ -158,6 +153,8 @@ trait FileImportTrait {
       val badRowsList: List[String] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
       val fileName : String = currentDateTime+inputFileName+".txt"
       write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
+      logger.info("Succesful records parsed:" + goodRowsList.length)
+      logger.info("Unsuccesful records parsed:" + badRowsList.length)
     }
   }
 
@@ -205,6 +202,7 @@ object FileImport extends FileImportTrait {
     if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
     if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
     if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
+    logger.info("The input file was:" + inputFileName )
   }
 
   def reInitLogger(testLogger: Logger): Unit = {
