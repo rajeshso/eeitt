@@ -44,7 +44,7 @@ class FIleImportSpec extends FlatSpec with Matchers {
     val badFileLocation: String = "src/test/"
     val inputFileName: String = "testFile"
     val agentData: List[String] = List("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|", "002| |ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
-    val parsedAgentData = FileImport.AgentU.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val parsedAgentData = FileImport.AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
     fileContents.toList should be(List("002| |||||||||BN12 4XL|GB|XAAP00000000007||||||||||non"))
     new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
@@ -56,7 +56,7 @@ class FIleImportSpec extends FlatSpec with Matchers {
     val badFileLocation: String = "src/test/"
     val inputFileName: String = "testFile"
     val businessData: List[String] = List("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|", "001| |ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
-    val parsedBusinessData = FileImport.BusinessU.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val parsedBusinessData = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
     fileContents.toList should be(List("001| |||||||||BN12 4XL|GB")) //TODO change data to business user data
     new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
