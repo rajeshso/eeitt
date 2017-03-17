@@ -80,7 +80,7 @@ class FIleImportSpec extends FlatSpec with Matchers {
     val fileImport = FileImport
     fileImport.reInitLogger(Logger("TestFileImport"))
     val myWorkbook: XSSFWorkbook = fileImport.getPasswordVerifiedFileAsWorkbook(file.getAbsolutePath, filePassword)
-    val workbookAsString = FileImport.readLines(myWorkbook)
+    val workbookAsString = FileImport.readRows(myWorkbook)
     workbookAsString shouldBe a[List[_]]
   }
 

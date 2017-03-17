@@ -14,6 +14,10 @@ import scala.collection.mutable.ListBuffer
 
 trait FileImportTrait {
   var logger = Logger("FileImport")
+  type RowString =  String
+  type CellValue = String
+  type CellsArray = Array[CellValue]
+
 
   def printToFile(f: File)(op: PrintWriter => Unit) {
     val p: PrintWriter = new PrintWriter(f)
@@ -34,11 +38,11 @@ trait FileImportTrait {
     parsedData
   }
 
-  def readLines(workBook: XSSFWorkbook): List[String] = {
+  def readRows(workBook: XSSFWorkbook): List[RowString] = {
     val sheet: XSSFSheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
     val rows: Iterator[Row] = sheet.rowIterator()
-    val rowBuffer: ListBuffer[String] = ListBuffer.empty[String]
+    val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[String]
     for (row <- rows) {
       val cells: Iterator[Cell] = row.cellIterator()
       val listOfCells: IndexedSeq[String] = for { cell <- 0 to (maxNumOfCells) } yield {
@@ -118,7 +122,7 @@ trait FileImportTrait {
     return true
   }
 
-  def getUser(userIdIndicator: String) : User = {
+  def getUser(userIdIndicator: CellValue) : User = {
     userIdIndicator match {
       case BusinessU.name => BusinessU
       case AgentU.name => AgentU
@@ -183,9 +187,9 @@ object FileImport extends FileImportTrait {
     logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
     validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
     val workbook: XSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName", s"$password")
-    val lineList: List[String] = readLines(workbook)
-    val linesAndRecordsAsListOfList: List[Array[String]] = lineList.map(line => line.split("\\|"))
-    val userIdIndicator: String = linesAndRecordsAsListOfList.tail.head.head
+    val lineList: List[RowString] = readRows(workbook)
+    val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.split("\\|"))
+    val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
     val user: FileImport.User = getUser(userIdIndicator)
     user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
   }
