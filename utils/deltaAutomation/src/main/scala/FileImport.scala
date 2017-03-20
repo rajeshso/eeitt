@@ -177,26 +177,21 @@ trait FileImportTrait {
 
 object FileImport extends FileImportTrait {
   def main(args: Array[String]): Unit = {
+    logger.info("Received arguments " + args.toList.toString)
 
-    logger.info("Received arguments " + args.toList.toString())
-    if (args.length < 5) {
-      logger.error("Incorrect number of arguments supplied. The program exits.")
-      System.exit(0)
+    args.toList match {
+      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: password :: Nil =>
+        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
+        val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
+        logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+        val workbook: XSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName", s"$password")
+        val lineList: List[RowString] = readRows(workbook)
+        val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.split("\\|"))
+        val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+        val user: FileImport.User = getUser(userIdIndicator)
+        user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+      case _ => logger.error("Incorrect number of arguments supplied. The program exits.")
     }
-    val inputFileLocation: String = args.apply(0)
-    val outputFileLocation: String = args.apply(1)
-    val badFileLocation: String = args.apply(2)
-    val inputFileName: String = args.apply(3)
-    val password: String = args.apply(4)
-    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-    logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
-    validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
-    val workbook: XSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName", s"$password")
-    val lineList: List[RowString] = readRows(workbook)
-    val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.split("\\|"))
-    val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
-    val user: FileImport.User = getUser(userIdIndicator)
-    user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
   }
 
   private def validateInput(
