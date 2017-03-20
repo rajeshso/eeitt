@@ -1,7 +1,7 @@
 import java.io.{ File, PrintWriter }
-import java.util.Calendar
-import java.nio.file.{ Files, Path, Paths }
 import java.nio.file.Files._
+import java.nio.file.{ Files, Path, Paths }
+import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
 import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
@@ -14,10 +14,9 @@ import scala.collection.mutable.ListBuffer
 
 trait FileImportTrait {
   var logger = Logger("FileImport")
-  type RowString =  String
+  type RowString = String
   type CellValue = String
   type CellsArray = Array[CellValue]
-
 
   def printToFile(f: File)(op: PrintWriter => Unit) {
     val p: PrintWriter = new PrintWriter(f)
@@ -115,7 +114,7 @@ trait FileImportTrait {
     return true
   }
 
-  def getUser(userIdIndicator: CellValue) : User = {
+  def getUser(userIdIndicator: CellValue): User = {
     userIdIndicator match {
       case BusinessUser.name => BusinessUser
       case AgentUser.name => AgentUser
@@ -125,6 +124,7 @@ trait FileImportTrait {
 
   sealed trait User {
     val name: String
+
     def partitionUserAndNonUserRecords(rowsList: List[RowString], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit
   }
 
@@ -136,7 +136,7 @@ trait FileImportTrait {
       val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString => rowString.split("\\|")).partition(cellArray => !(cellArray(1) == "" || cellArray(1) == "select"))
       val goodRowsList: List[RowString] = goodRows.map(cellsArray => (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}"""))
       val badRowsList: List[RowString] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
-      val fileName : String = currentDateTime+inputFileName+".txt"
+      val fileName: String = currentDateTime + inputFileName + ".txt"
       write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
       logger.info("Succesful records parsed:" + goodRowsList.length)
       logger.info("Unsuccesful records parsed:" + badRowsList.length)
@@ -151,7 +151,7 @@ trait FileImportTrait {
       val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString => rowString.split("\\|")).partition(cellArray => !(cellArray(1) == "" || cellArray(1) == "select"))
       val goodRowsList: List[String] = goodRows.map(cellsArray => (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}|${cellsArray(12)}|||||||||${cellsArray(21)}|${cellsArray(22)}"""))
       val badRowsList: List[String] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
-      val fileName : String = currentDateTime+inputFileName+".txt"
+      val fileName: String = currentDateTime + inputFileName + ".txt"
       write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
       logger.info("Succesful records parsed:" + goodRowsList.length)
       logger.info("Unsuccesful records parsed:" + badRowsList.length)
@@ -173,27 +173,30 @@ trait FileImportTrait {
 }
 
 object FileImport extends FileImportTrait {
-  def main(args: Array[String]): Unit = {
+  def main(args: List[String]): Unit = {
+    commandLineArgs(args)
 
-    logger.info("Received arguments " + args.toList.toString())
+    logger.info("Received arguments " + args.toString())
     if (args.length < 5) {
       logger.error("Incorrect number of arguments supplied. The program exits.")
       System.exit(0)
     }
-    val inputFileLocation: String = args.apply(0)
-    val outputFileLocation: String = args.apply(1)
-    val badFileLocation: String = args.apply(2)
-    val inputFileName: String = args.apply(3)
-    val password: String = args.apply(4)
-    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-    logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
-    validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
-    val workbook: XSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName", s"$password")
-    val lineList: List[RowString] = readRows(workbook)
-    val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.split("\\|"))
-    val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
-    val user: FileImport.User = getUser(userIdIndicator)
-    user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+
+    def commandLineArgs(list: List[String]): Unit = {
+      list match {
+        case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: password :: Nil =>
+          validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
+          val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
+          logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+          val workbook: XSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName", s"$password")
+          val lineList: List[RowString] = readRows(workbook)
+          val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.split("\\|"))
+          val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+          val user: FileImport.User = getUser(userIdIndicator)
+          user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+        case _ => logger.info("Error in input args")
+      }
+    }
   }
 
   private def validateInput(inputFileLocation: String, outputFileLocation: String, badFileLocation: String, inputFileName: String, password: String) = {
@@ -202,11 +205,10 @@ object FileImport extends FileImportTrait {
     if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
     if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
     if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
-    logger.info("The input file was:" + inputFileName )
+    logger.info("The input file was:" + inputFileName)
   }
 
   def reInitLogger(testLogger: Logger): Unit = {
     logger = testLogger
   }
-
 }
