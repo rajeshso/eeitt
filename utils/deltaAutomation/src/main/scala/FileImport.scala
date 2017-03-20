@@ -124,7 +124,10 @@ trait FileImportTrait {
       inputFileName: String
     ): Unit = {
       val rowsListExceptHeader: List[RowString] = rowsList.tail
-      val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString => rowString.split("\\|")).filter(cellArray => cellArray.length > 1).partition(cellArray => !(cellArray(1).length == 0 || cellArray(1) == "select"))
+      val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString =>
+        rowString.split("\\|")).filter(cellArray =>
+        cellArray.length > 1).partition(cellArray =>
+        !(cellArray(1).length == 0 || cellArray(1) == "select"))
       val goodRowsList: List[RowString] = goodRows.map(formatFunction)
       val badRowsList: List[RowString] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
       val fileName: String = currentDateTime + inputFileName + ".txt"
@@ -152,12 +155,19 @@ trait FileImportTrait {
     val name: String = "***"
     override val formatFunction = (cellsArray: CellsArray) => ""
 
-    override def partitionUserAndNonUserRecords(fileString: List[RowString], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
+    override def partitionUserAndNonUserRecords(fileString: List[RowString],
+                                                outputFileLocation: String,
+                                                badFileLocation: String,
+                                                currentDateTime: String,
+                                                inputFileName: String): Unit = {
       logger.info("An unrecognised file type has been encountered please see the bad output folder")
     }
   }
 
-  protected def write(outputFileLocation: String, badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String): Unit = {
+  protected def write(
+    outputFileLocation: String,
+    badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
+  ): Unit = {
     printToFile(new File(s"$badFileLocation//$fileName")) { rowString => badRowsList.foreach(rowString.println) }
     printToFile(new File(s"$outputFileLocation//$fileName")) { rowString => goodRowsList.foreach(rowString.println) }
   }
@@ -177,13 +187,13 @@ trait FileImportTrait {
 
 object FileImport extends FileImportTrait {
   def main(args: Array[String]): Unit = {
+    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
+    logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
     logger.info("Received arguments " + args.toList.toString)
 
     args.toList match {
       case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: password :: Nil =>
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
-        val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-        logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
         val workbook: XSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName", s"$password")
         val lineList: List[RowString] = readRows(workbook)
         val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.split("\\|"))
