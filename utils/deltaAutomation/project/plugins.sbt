@@ -1,4 +1,3 @@
-
 logLevel := Level.Warn
 
 resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/"
