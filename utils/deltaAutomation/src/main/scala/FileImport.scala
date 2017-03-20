@@ -14,12 +14,11 @@ import scala.collection.mutable.ListBuffer
 
 trait FileImportTrait {
   var logger = Logger("FileImport")
-  type RowString =  String
+  type RowString = String
   type CellValue = String
   type CellsArray = Array[CellValue]
 
-
-  def printToFile(f: File)(op: PrintWriter => Unit) {
+  def printToFile(f: File)(op: PrintWriter => Unit) = {
     val p: PrintWriter = new PrintWriter(f)
     try {
       op(p)
@@ -78,44 +77,42 @@ trait FileImportTrait {
     val path: Path = Paths.get(fileLocation)
     if (!exists(path) || !isDirectory(path)) {
       logger.error(s"Invalid filelocation in $fileLocation - The program exits")
-      return false
-    }
-    if (read && !isReadable(path)) {
+      false
+    } else if (read && !isReadable(path)) {
       logger.error(s"Unable to read from $fileLocation - The program exits")
-      return false
-    }
-    if (write && !isWritable(path)) {
+      false
+    } else if (write && !isWritable(path)) {
       logger.error(s"Unable to write to $fileLocation - The program exits")
-      return false
+      false
+    } else {
+      true
     }
-    return true
   }
 
   def isValidFile(file: String): Boolean = {
     val path: Path = Paths.get(file)
     if (!exists(path) || !isRegularFile(path)) {
       logger.error(s"Invalid filelocation in $file - The program exits")
-      return false
-    }
-    if (!isReadable(path)) {
+      false
+    } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - The program exits")
-      return false
-    }
-    if (!Files.probeContentType(path).equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+      false
+    } else if (!Files.probeContentType(path).equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
       logger.error(s"Incorrent File Content in $file - The program exits")
-      return false
+      false
+    } else {
+      try {
+        new NPOIFSFileSystem(new File(s"$file"), true)
+      } catch {
+        case e: Throwable =>
+          logger.error(s"Incorrent File Content in $file ${e.getMessage}- The program exits")
+          return false
+      }
+      true
     }
-    try {
-      new NPOIFSFileSystem(new File(s"$file"), true)
-    } catch {
-      case e: Throwable =>
-        logger.error(s"Incorrent File Content in $file ${e.getMessage}- The program exits")
-        return false
-    }
-    return true
   }
 
-  def getUser(userIdIndicator: CellValue) : User = {
+  def getUser(userIdIndicator: CellValue): User = {
     userIdIndicator match {
       case BusinessUser.name => BusinessUser
       case AgentUser.name => AgentUser
@@ -125,41 +122,39 @@ trait FileImportTrait {
 
   sealed trait User {
     val name: String
-    def partitionUserAndNonUserRecords(rowsList: List[RowString], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit
+    val formatFunction: (CellsArray) => String
+
+    def partitionUserAndNonUserRecords(
+      rowsList: List[RowString],
+      outputFileLocation: String,
+      badFileLocation: String,
+      currentDateTime: String,
+      inputFileName: String
+    ): Unit = {
+      val rowsListExceptHeader: List[RowString] = rowsList.tail
+      val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString => rowString.split("\\|")).partition(cellArray => !(cellArray(1) == "" || cellArray(1) == "select"))
+      val goodRowsList: List[RowString] = goodRows.map(formatFunction)
+      val badRowsList: List[RowString] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
+      val fileName: String = currentDateTime + inputFileName + ".txt"
+      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
+      logger.info("Succesful records parsed:" + goodRowsList.length)
+      logger.info("Unsuccesful records parsed:" + badRowsList.length)
+    }
   }
 
   case object BusinessUser extends User {
     val name: String = "001"
-
-    override def partitionUserAndNonUserRecords(rowsList: List[RowString], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
-      val rowsListExceptHeader: List[RowString] = rowsList.tail
-      val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString => rowString.split("\\|")).partition(cellArray => !(cellArray(1) == "" || cellArray(1) == "select"))
-      val goodRowsList: List[RowString] = goodRows.map(cellsArray => (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}"""))
-      val badRowsList: List[RowString] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
-      val fileName : String = currentDateTime+inputFileName+".txt"
-      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
-      logger.info("Succesful records parsed:" + goodRowsList.length)
-      logger.info("Unsuccesful records parsed:" + badRowsList.length)
-    }
+    override val formatFunction = (cellsArray: CellsArray) => { (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}""") }
   }
 
   case object AgentUser extends User {
     val name: String = "002"
-
-    override def partitionUserAndNonUserRecords(rowsList: List[RowString], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
-      val rowsListExceptHeader: List[RowString] = rowsList.tail
-      val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString => rowString.split("\\|")).partition(cellArray => !(cellArray(1) == "" || cellArray(1) == "select"))
-      val goodRowsList: List[String] = goodRows.map(cellsArray => (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}|${cellsArray(12)}|||||||||${cellsArray(21)}|${cellsArray(22)}"""))
-      val badRowsList: List[String] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
-      val fileName : String = currentDateTime+inputFileName+".txt"
-      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
-      logger.info("Succesful records parsed:" + goodRowsList.length)
-      logger.info("Unsuccesful records parsed:" + badRowsList.length)
-    }
+    override val formatFunction = (cellsArray: CellsArray) => { (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}|${cellsArray(12)}|||||||||${cellsArray(21)}|${cellsArray(22)}""") }
   }
 
   case object UnsupportedUser extends User {
     val name: String = "***"
+    override val formatFunction = (cellsArray: CellsArray) => ""
 
     override def partitionUserAndNonUserRecords(fileString: List[RowString], outputFileLocation: String, badFileLocation: String, currentDateTime: String, inputFileName: String): Unit = {
       logger.info("An unrecognised file type has been encountered please see the bad output folder")
@@ -196,13 +191,19 @@ object FileImport extends FileImportTrait {
     user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
   }
 
-  private def validateInput(inputFileLocation: String, outputFileLocation: String, badFileLocation: String, inputFileName: String, password: String) = {
+  private def validateInput(
+    inputFileLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String,
+    inputFileName: String,
+    password: String
+  ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
     if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
     if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
-    logger.info("The input file was:" + inputFileName )
+    logger.info("The input file was:" + inputFileName)
   }
 
   def reInitLogger(testLogger: Logger): Unit = {
