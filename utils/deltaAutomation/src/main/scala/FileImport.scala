@@ -189,7 +189,6 @@ object FileImport extends FileImportTrait {
   def commandLineArgs(list: List[String]): Unit = {
     list match {
       case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: password :: Nil =>
-        logger.info("Hello")
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
         val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
         logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
