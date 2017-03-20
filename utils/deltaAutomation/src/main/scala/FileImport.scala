@@ -1,17 +1,17 @@
-import java.io.{File, PrintWriter}
+import java.io.{ File, PrintWriter }
 import java.nio.file.Files._
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{ Files, Path, Paths }
 import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
+import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row}
-import org.apache.poi.xssf.usermodel.{XSSFSheet, XSSFWorkbook}
+import org.apache.poi.ss.usermodel.{ Cell, Row }
+import org.apache.poi.xssf.usermodel.{ XSSFSheet, XSSFWorkbook }
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 trait FileImportTrait {
   var logger = Logger("FileImport")
@@ -92,7 +92,7 @@ trait FileImportTrait {
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[String]
     for (row <- rows) {
       val cells: Iterator[Cell] = row.cellIterator()
-      val listOfCells: IndexedSeq[String] = for {cell <- 0 to (maxNumOfCells)} yield {
+      val listOfCells: IndexedSeq[String] = for { cell <- 0 to (maxNumOfCells) } yield {
         if (row.getCell(cell) == null) {
           ""
         } else {
@@ -117,14 +117,14 @@ trait FileImportTrait {
     val formatFunction: (CellsArray) => String
 
     def partitionUserAndNonUserRecords(
-                                        rowsList: List[RowString],
-                                        outputFileLocation: String,
-                                        badFileLocation: String,
-                                        currentDateTime: String,
-                                        inputFileName: String
-                                      ): Unit = {
+      rowsList: List[RowString],
+      outputFileLocation: String,
+      badFileLocation: String,
+      currentDateTime: String,
+      inputFileName: String
+    ): Unit = {
       val rowsListExceptHeader: List[RowString] = rowsList.tail
-      val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString => rowString.split("\\|")).partition(cellArray => !(cellArray(1) == "" || cellArray(1) == "select"))
+      val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString => rowString.split("\\|")).filter(cellArray => cellArray.length > 1).partition(cellArray => !(cellArray(1).length == 0 || cellArray(1) == "select"))
       val goodRowsList: List[RowString] = goodRows.map(formatFunction)
       val badRowsList: List[RowString] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
       val fileName: String = currentDateTime + inputFileName + ".txt"
@@ -163,14 +163,14 @@ trait FileImportTrait {
   }
 
   def printToFile(f: File)(op: PrintWriter => Unit) = {
-    val p: PrintWriter = new PrintWriter(f)
+    val writer: PrintWriter = new PrintWriter(f)
     try {
-      op(p)
+      op(writer)
       logger.info("The output file is " + f.getAbsoluteFile)
     } catch {
       case e: Throwable => logger.error(e.getMessage)
     } finally {
-      p.close()
+      writer.close()
     }
   }
 }
@@ -200,12 +200,12 @@ object FileImport extends FileImportTrait {
   }
 
   private def validateInput(
-                             inputFileLocation: String,
-                             outputFileLocation: String,
-                             badFileLocation: String,
-                             inputFileName: String,
-                             password: String
-                           ) = {
+    inputFileLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String,
+    inputFileName: String,
+    password: String
+  ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
