@@ -11,7 +11,7 @@ sudo add-apt-repository ppa:webupd8team/java
 sudo apt update
 sudo apt install oracle-java8-unlimited-jce-policy
 
-2. Ensure you have the delta-automation-assembly-1.0.jar and Scala v2.12.1+ are in an accessible classpath
+2. Ensure you have the delta-automation-assembly-1.0.jar, JRE8+ and Scala v2.12.1+ are in an accessible classpath
 
 3. To use this service please run the DeltaAutomationScript with the arguments for the script. The first argument needs to be quoted due to spaces. An example of running the script would be.
 
