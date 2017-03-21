@@ -13,9 +13,10 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 import scala.util.{ Failure, Success, Try }
 
+case class RowString(content: String) extends AnyVal
+
 trait FileImportTrait {
   var logger = Logger("FileImport")
-  type RowString = String
   type CellValue = String
   type CellsArray = Array[CellValue]
 
@@ -89,7 +90,7 @@ trait FileImportTrait {
     val sheet: XSSFSheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
     val rows: Iterator[Row] = sheet.rowIterator()
-    val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[String]
+    val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
       val cells: Iterator[Cell] = row.cellIterator()
       val listOfCells: IndexedSeq[String] = for { cell <- 0 to (maxNumOfCells) } yield {
@@ -99,7 +100,7 @@ trait FileImportTrait {
           row.getCell(cell).toString
         }
       }
-      rowBuffer += listOfCells.mkString("|")
+      rowBuffer += RowString(listOfCells.mkString("|"))
     }
     rowBuffer.toList
   }
@@ -114,7 +115,10 @@ trait FileImportTrait {
 
   sealed trait User {
     val name: String
-    val formatFunction: (CellsArray) => String
+    val goodRecordFormatFunction: (CellsArray) => RowString
+    val badRecordFormatFunction = (cellsArray: CellsArray) => {
+      (RowString(s"""${cellsArray.mkString(", ")}"""))
+    }
 
     def partitionUserAndNonUserRecords(
       rowsList: List[RowString],
@@ -125,11 +129,11 @@ trait FileImportTrait {
     ): Unit = {
       val rowsListExceptHeader: List[RowString] = rowsList.tail
       val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString =>
-        rowString.split("\\|")).filter(cellArray =>
+        rowString.content.split("\\|")).filter(cellArray =>
         cellArray.length > 1).partition(cellArray =>
         !(cellArray(1).length == 0 || cellArray(1) == "select"))
-      val goodRowsList: List[RowString] = goodRows.map(formatFunction)
-      val badRowsList: List[RowString] = badRows.map(cellsArray => (s"""${cellsArray.toList}"""))
+      val goodRowsList: List[RowString] = goodRows.map(goodRecordFormatFunction)
+      val badRowsList: List[RowString] = badRows.map(badRecordFormatFunction)
       val fileName: String = currentDateTime + inputFileName + ".txt"
       write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
       logger.info("Succesful records parsed:" + goodRowsList.length)
@@ -139,27 +143,29 @@ trait FileImportTrait {
 
   case object BusinessUser extends User {
     val name: String = "001"
-    override val formatFunction = (cellsArray: CellsArray) => {
-      (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}""")
+    override val goodRecordFormatFunction = (cellsArray: CellsArray) => {
+      (RowString(s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}"""))
     }
   }
 
   case object AgentUser extends User {
     val name: String = "002"
-    override val formatFunction = (cellsArray: CellsArray) => {
-      (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}|${cellsArray(12)}|||||||||${cellsArray(21)}|${cellsArray(22)}""")
+    override val goodRecordFormatFunction = (cellsArray: CellsArray) => {
+      (RowString(s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}|${cellsArray(12)}|||||||||${cellsArray(21)}|${cellsArray(22)}"""))
     }
   }
 
   case object UnsupportedUser extends User {
     val name: String = "***"
-    override val formatFunction = (cellsArray: CellsArray) => ""
+    override val goodRecordFormatFunction = (cellsArray: CellsArray) => RowString("")
 
-    override def partitionUserAndNonUserRecords(fileString: List[RowString],
-                                                outputFileLocation: String,
-                                                badFileLocation: String,
-                                                currentDateTime: String,
-                                                inputFileName: String): Unit = {
+    override def partitionUserAndNonUserRecords(
+      fileString: List[RowString],
+      outputFileLocation: String,
+      badFileLocation: String,
+      currentDateTime: String,
+      inputFileName: String
+    ): Unit = {
       logger.info("An unrecognised file type has been encountered please see the bad output folder")
     }
   }
@@ -168,8 +174,8 @@ trait FileImportTrait {
     outputFileLocation: String,
     badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
   ): Unit = {
-    printToFile(new File(s"$badFileLocation//$fileName")) { rowString => badRowsList.foreach(rowString.println) }
-    printToFile(new File(s"$outputFileLocation//$fileName")) { rowString => goodRowsList.foreach(rowString.println) }
+    printToFile(new File(s"$badFileLocation//$fileName")) { printWriter => badRowsList.foreach(rowString => (printWriter.println(rowString.content))) }
+    printToFile(new File(s"$outputFileLocation//$fileName")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
   }
 
   def printToFile(f: File)(op: PrintWriter => Unit) = {
@@ -196,7 +202,7 @@ object FileImport extends FileImportTrait {
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
         val workbook: XSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName", s"$password")
         val lineList: List[RowString] = readRows(workbook)
-        val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.split("\\|"))
+        val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|"))
         val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
         val user: FileImport.User = getUser(userIdIndicator)
         user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
