@@ -12,5 +12,6 @@ libraryDependencies ++= Seq(
   "org.scalactic" %% "scalactic" % "3.0.1" % Test,
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
-  "ch.qos.logback" % "logback-classic" % "1.1.7"
-)
+  "ch.qos.logback" % "logback-classic" % "1.1.7",
+  "com.google.guava" % "guava" % "12.0"
+  )

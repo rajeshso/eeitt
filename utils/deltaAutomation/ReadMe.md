@@ -13,8 +13,8 @@ This application takes a password protected spreadsheet and returns a text file 
 
 2. To use this application you need a few things:
 
-   1. An input folder in which to place the .xlsx f
-   iles to be processed.
+   1. An input folder in which to place the .xlsx 
+   Files to be processed.
         
    2. An output folder where ether output records will be kept.
         

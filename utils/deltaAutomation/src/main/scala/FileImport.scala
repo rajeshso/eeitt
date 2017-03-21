@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.Logger
 import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
 import org.apache.poi.ss.usermodel.{ Cell, Row }
-import org.apache.poi.xssf.usermodel.{ XSSFSheet, XSSFWorkbook }
+import org.apache.poi.hssf.usermodel.{ HSSFSheet, HSSFWorkbook }
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
@@ -22,7 +22,7 @@ trait FileImportTrait {
   def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
     val path: Path = Paths.get(fileLocation)
     if (!exists(path) || !isDirectory(path)) {
-      logger.error(s"Invalid filelocation in $fileLocation - The program exits")
+      logger.error(s"Invalid file location in $fileLocation - The program exits")
       false
     } else if (read && !isReadable(path)) {
       logger.error(s"Unable to read from $fileLocation - The program exits")
@@ -43,16 +43,16 @@ trait FileImportTrait {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - The program exits")
       false
-    } else if (!Files.probeContentType(path).equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
-      logger.error(s"Incorrent File Content in $file - The program exits")
-      false
-    } else {
+    } //else if (!Files.probeContentType(path).equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+    //      logger.error(s"Incorrent File Content in $file - The program exits")
+    //      false
+    /*}*/ else {
       Try(new NPOIFSFileSystem(new File(s"$file"), true)) match {
         case Success(_) => true
-        case Failure(e) => {
-          logger.error(s"Incorrent File Content in $file ${e.getMessage}- The program exits")
-          false
-        }
+        // case Failure(e) => {
+        // logger.error(s"Incorrent File Content in $file ${e.getMessage}- The program exits")
+        //false
+
       }
     }
   }
@@ -77,16 +77,16 @@ trait FileImportTrait {
     }
   }
 
-  def getPasswordVerifiedFileAsWorkbook(fileLocation: String, password: String): XSSFWorkbook = {
-    val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
-    val encryptionInfo: EncryptionInfo = new EncryptionInfo(fileSystem)
-    val decryptor: Decryptor = Decryptor.getInstance(encryptionInfo)
-    decryptor.verifyPassword(s"$password")
-    new XSSFWorkbook(decryptor.getDataStream(fileSystem))
+  def getPasswordVerifiedFileAsWorkbook(fileLocation: String): HSSFWorkbook = {
+    val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), false)
+    //val encryptionInfo: EncryptionInfo = new EncryptionInfo(fileSystem)
+    //val decryptor: Decryptor = Decryptor.getInstance(encryptionInfo)
+    // new HSSFWorkbook(decryptor.getDataStream(fileSystem))
+    new HSSFWorkbook(fileSystem)
   }
 
-  def readRows(workBook: XSSFWorkbook): List[RowString] = {
-    val sheet: XSSFSheet = workBook.getSheetAt(0)
+  def readRows(workBook: HSSFWorkbook): List[RowString] = {
+    val sheet: HSSFSheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
     val rows: Iterator[Row] = sheet.rowIterator()
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[String]
@@ -134,20 +134,25 @@ trait FileImportTrait {
       write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
       logger.info("Succesful records parsed:" + goodRowsList.length)
       logger.info("Unsuccesful records parsed:" + badRowsList.length)
+      println("Correct lines: ")
+      goodRowsList.foreach(x => println(x))
+
+      println("Incorrect lines: ")
+      badRowsList.map(x => println(x))
     }
   }
 
   case object BusinessUser extends User {
     val name: String = "001"
     override val formatFunction = (cellsArray: CellsArray) => {
-      (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}""")
+      s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}"""
     }
   }
 
   case object AgentUser extends User {
     val name: String = "002"
     override val formatFunction = (cellsArray: CellsArray) => {
-      (s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}|${cellsArray(12)}|||||||||${cellsArray(21)}|${cellsArray(22)}""")
+      s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}|${cellsArray(12)}|||||||||${cellsArray(21)}|${cellsArray(22)}"""
     }
   }
 
@@ -155,15 +160,16 @@ trait FileImportTrait {
     val name: String = "***"
     override val formatFunction = (cellsArray: CellsArray) => ""
 
-    override def partitionUserAndNonUserRecords(fileString: List[RowString],
-                                                outputFileLocation: String,
-                                                badFileLocation: String,
-                                                currentDateTime: String,
-                                                inputFileName: String): Unit = {
+    override def partitionUserAndNonUserRecords(
+      fileString: List[RowString],
+      outputFileLocation: String,
+      badFileLocation: String,
+      currentDateTime: String,
+      inputFileName: String
+    ): Unit = {
       logger.info("An unrecognised file type has been encountered please see the bad output folder")
     }
   }
-
   protected def write(
     outputFileLocation: String,
     badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
@@ -194,7 +200,7 @@ object FileImport extends FileImportTrait {
     args.toList match {
       case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: password :: Nil =>
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
-        val workbook: XSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName", s"$password")
+        val workbook: HSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName")
         val lineList: List[RowString] = readRows(workbook)
         val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.split("\\|"))
         val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
@@ -215,9 +221,10 @@ object FileImport extends FileImportTrait {
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
     else if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
-    else if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
+    //  else if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
     else
       logger.info("The input file was:" + inputFileName)
+
   }
 
   def reInitLogger(testLogger: Logger): Unit = {
