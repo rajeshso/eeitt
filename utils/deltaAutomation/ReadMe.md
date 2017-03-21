@@ -13,11 +13,12 @@ This application takes a password protected spreadsheet and returns a text file 
 
 2. To use this application you need a few things:
 
-   1. An input folder in which to place the .xlsx foiles to be processed.
+   1. An input folder in which to place the .xlsx f
+   iles to be processed.
         
-   2. An output folder wher ethe output records will be kept.
+   2. An output folder where ether output records will be kept.
         
-   3. An output flder to store the files containing the records which could not be parsed.
+   3. An output folder to store the files containing the records which could not be parsed.
         
    4. The jar file which the script requires.
         
@@ -27,3 +28,4 @@ This application takes a password protected spreadsheet and returns a text file 
    ./DeltaAutomationScript "full/path/to/inputFolder" "full/path/to/outputfolder" "full/path/to/badFolder" "fileName.xlsx" PASSWORD
 
    The files produced by this will be of the original name with a time stamp appended to them.
+
