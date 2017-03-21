@@ -8,3 +8,4 @@ out
 classes/
 project/project/
 ~/
+!/.travis.yml
