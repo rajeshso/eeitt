@@ -1,17 +1,16 @@
-import java.io.{ File, PrintWriter }
+import java.io.{File, PrintWriter}
 import java.nio.file.Files._
-import java.nio.file.{ Files, Path, Paths }
+import java.nio.file.{Files, Path, Paths}
 import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
+import org.apache.poi.hssf.usermodel.{HSSFSheet, HSSFWorkbook}
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{ Cell, Row }
-import org.apache.poi.hssf.usermodel.{ HSSFSheet, HSSFWorkbook }
+import org.apache.poi.ss.usermodel.{Cell, Row}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 case class RowString(content: String) extends AnyVal
 
@@ -44,36 +43,23 @@ trait FileImportTrait {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - The program exits")
       false
+    }
+    else if (!Files.probeContentType(path).equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+      logger.error(s"Incorrent File Content in $file - The program exits")
+      false
     } else {
       Try(new NPOIFSFileSystem(new File(s"$file"), true)) match {
         case Success(_) => true
-
-
+        case Failure(e) => {
+          logger.error(s"Incorrent File Content in $file ${e.getMessage}- The program exits")
+          false
+        }
       }
     }
   }
 
-  def verifyPassword(file: String, password: String): Boolean = {
-    val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$file"), true)
-    val encryptionInfo: EncryptionInfo = new EncryptionInfo(fileSystem)
-    val decryptor: Decryptor = Decryptor.getInstance(encryptionInfo)
-    var verificationSuccessful: Boolean = false
-    Try(decryptor.verifyPassword(password)) match {
-      case Success(true) => {
-        true
-      }
-      case Success(false) => {
-        logger.info("Unable to process document - incorrect password")
-        false
-      }
-      case Failure(throwable) => {
-        logger.error(throwable.getMessage)
-        false
-      }
-    }
-  }
 
-  def getPasswordVerifiedFileAsWorkbook(fileLocation: String): HSSFWorkbook = {
+  def fileAsWorkbook(fileLocation: String): HSSFWorkbook = {
     val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), false)
     new HSSFWorkbook(fileSystem)
   }
@@ -85,7 +71,7 @@ trait FileImportTrait {
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
       val cells: Iterator[Cell] = row.cellIterator()
-      val listOfCells: IndexedSeq[String] = for { cell <- 0 to (maxNumOfCells) } yield {
+      val listOfCells: IndexedSeq[String] = for {cell <- 0 to (maxNumOfCells)} yield {
         if (row.getCell(cell) == null) {
           ""
         } else {
@@ -113,12 +99,12 @@ trait FileImportTrait {
     }
 
     def partitionUserAndNonUserRecords(
-      rowsList: List[RowString],
-      outputFileLocation: String,
-      badFileLocation: String,
-      currentDateTime: String,
-      inputFileName: String
-    ): Unit = {
+                                        rowsList: List[RowString],
+                                        outputFileLocation: String,
+                                        badFileLocation: String,
+                                        currentDateTime: String,
+                                        inputFileName: String
+                                      ): Unit = {
       val rowsListExceptHeader: List[RowString] = rowsList.tail
       val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString =>
         rowString.content.split("\\|")).filter(cellArray =>
@@ -152,20 +138,20 @@ trait FileImportTrait {
     override val goodRecordFormatFunction = (cellsArray: CellsArray) => RowString("")
 
     override def partitionUserAndNonUserRecords(
-      fileString: List[RowString],
-      outputFileLocation: String,
-      badFileLocation: String,
-      currentDateTime: String,
-      inputFileName: String
-    ): Unit = {
+                                                 fileString: List[RowString],
+                                                 outputFileLocation: String,
+                                                 badFileLocation: String,
+                                                 currentDateTime: String,
+                                                 inputFileName: String
+                                               ): Unit = {
       logger.info("An unrecognised file type has been encountered please see the bad output folder")
     }
   }
 
   protected def write(
-    outputFileLocation: String,
-    badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
-  ): Unit = {
+                       outputFileLocation: String,
+                       badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
+                     ): Unit = {
     printToFile(new File(s"$badFileLocation//$fileName")) { printWriter => badRowsList.foreach(rowString => (printWriter.println(rowString.content))) }
     printToFile(new File(s"$outputFileLocation//$fileName")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
   }
@@ -192,7 +178,7 @@ object FileImport extends FileImportTrait {
     args.toList match {
       case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: password :: Nil =>
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
-        val workbook: HSSFWorkbook = getPasswordVerifiedFileAsWorkbook(s"$inputFileLocation//$inputFileName")
+        val workbook: HSSFWorkbook = fileAsWorkbook(s"$inputFileLocation//$inputFileName")
         val lineList: List[RowString] = readRows(workbook)
         val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|"))
         val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
@@ -203,17 +189,16 @@ object FileImport extends FileImportTrait {
   }
 
   private def validateInput(
-    inputFileLocation: String,
-    outputFileLocation: String,
-    badFileLocation: String,
-    inputFileName: String,
-    password: String
-  ) = {
+                             inputFileLocation: String,
+                             outputFileLocation: String,
+                             badFileLocation: String,
+                             inputFileName: String,
+                             password: String
+                           ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
     else if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
-    //  else if (!verifyPassword(s"$inputFileLocation//$inputFileName", s"$password")) System.exit(0)
     else
       logger.info("The input file was:" + inputFileName)
   }
