@@ -173,8 +173,8 @@ object FileImport extends FileImportTrait {
     logger.info("Received arguments " + args.toList.toString)
 
     args.toList match {
-      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: password :: Nil =>
-        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
+      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: Nil =>
+        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName)
         val workbook: HSSFWorkbook = fileAsWorkbook(s"$inputFileLocation//$inputFileName")
         val lineList: List[RowString] = readRows(workbook)
         val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
@@ -189,8 +189,7 @@ object FileImport extends FileImportTrait {
                              inputFileLocation: String,
                              outputFileLocation: String,
                              badFileLocation: String,
-                             inputFileName: String,
-                             password: String
+                             inputFileName: String
                            ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
