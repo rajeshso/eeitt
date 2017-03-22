@@ -1,22 +1,21 @@
-import java.io.{File, PrintWriter}
+import java.io.{ File, PrintWriter }
 import java.nio.file.Files._
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{ Files, Path, Paths }
 import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.hssf.usermodel.{HSSFSheet, HSSFWorkbook}
+import org.apache.poi.hssf.usermodel.{ HSSFSheet, HSSFWorkbook }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row}
+import org.apache.poi.ss.usermodel.{ Cell, Row }
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 case class RowString(content: String) extends AnyVal
-
+case class CellValue(content: String) extends AnyVal
 trait FileImportTrait {
   var logger = Logger("FileImport")
-  type CellValue = String
   type CellsArray = Array[CellValue]
 
   def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
@@ -43,8 +42,7 @@ trait FileImportTrait {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - The program exits")
       false
-    }
-    else if (!Files.probeContentType(path).equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+    } else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) {
       logger.error(s"Incorrent File Content in $file - The program exits")
       false
     } else {
@@ -58,7 +56,6 @@ trait FileImportTrait {
     }
   }
 
-
   def fileAsWorkbook(fileLocation: String): HSSFWorkbook = {
     val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), false)
     new HSSFWorkbook(fileSystem)
@@ -71,7 +68,7 @@ trait FileImportTrait {
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
       val cells: Iterator[Cell] = row.cellIterator()
-      val listOfCells: IndexedSeq[String] = for {cell <- 0 to (maxNumOfCells)} yield {
+      val listOfCells: IndexedSeq[String] = for { cell <- 0 to (maxNumOfCells) } yield {
         if (row.getCell(cell) == null) {
           ""
         } else {
@@ -84,7 +81,7 @@ trait FileImportTrait {
   }
 
   def getUser(userIdIndicator: CellValue): User = {
-    userIdIndicator match {
+    userIdIndicator.content match {
       case BusinessUser.name => BusinessUser
       case AgentUser.name => AgentUser
       case _ => UnsupportedUser
@@ -95,21 +92,21 @@ trait FileImportTrait {
     val name: String
     val goodRecordFormatFunction: (CellsArray) => RowString
     val badRecordFormatFunction = (cellsArray: CellsArray) => {
-      (RowString(s"""${cellsArray.mkString(", ")}"""))
+      (RowString(s"""${cellsArray.map(a => a.content).mkString("|")}"""))
     }
 
     def partitionUserAndNonUserRecords(
-                                        rowsList: List[RowString],
-                                        outputFileLocation: String,
-                                        badFileLocation: String,
-                                        currentDateTime: String,
-                                        inputFileName: String
-                                      ): Unit = {
+      rowsList: List[RowString],
+      outputFileLocation: String,
+      badFileLocation: String,
+      currentDateTime: String,
+      inputFileName: String
+    ): Unit = {
       val rowsListExceptHeader: List[RowString] = rowsList.tail
       val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString =>
         rowString.content.split("\\|")).filter(cellArray =>
-        cellArray.length > 1).partition(cellArray =>
-        !(cellArray(1).length == 0 || cellArray(1) == "select"))
+        cellArray.length > 1).map(cellStringArray => cellStringArray.map(cellString => CellValue(cellString))).partition(cellArray =>
+        !(cellArray(1).content.length == 0 || cellArray(1).content == "select"))
       val goodRowsList: List[RowString] = goodRows.map(goodRecordFormatFunction)
       val badRowsList: List[RowString] = badRows.map(badRecordFormatFunction)
       val fileName: String = currentDateTime + inputFileName + ".txt"
@@ -122,14 +119,14 @@ trait FileImportTrait {
   case object BusinessUser extends User {
     val name: String = "001"
     override val goodRecordFormatFunction = (cellsArray: CellsArray) => {
-      (RowString(s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}"""))
+      (RowString(s"""${cellsArray(0).content}|${cellsArray(1).content}|||||||||${cellsArray(10).content}|${cellsArray(11).content}"""))
     }
   }
 
   case object AgentUser extends User {
     val name: String = "002"
     override val goodRecordFormatFunction = (cellsArray: CellsArray) => {
-      (RowString(s"""${cellsArray(0)}|${cellsArray(1)}|||||||||${cellsArray(10)}|${cellsArray(11)}|${cellsArray(12)}|||||||||${cellsArray(21)}|${cellsArray(22)}"""))
+      (RowString(s"""${cellsArray(0).content}|${cellsArray(1).content}|||||||||${cellsArray(10).content}|${cellsArray(11).content}|${cellsArray(12).content}|||||||||${cellsArray(21).content}|${cellsArray(22).content}"""))
     }
   }
 
@@ -138,20 +135,20 @@ trait FileImportTrait {
     override val goodRecordFormatFunction = (cellsArray: CellsArray) => RowString("")
 
     override def partitionUserAndNonUserRecords(
-                                                 fileString: List[RowString],
-                                                 outputFileLocation: String,
-                                                 badFileLocation: String,
-                                                 currentDateTime: String,
-                                                 inputFileName: String
-                                               ): Unit = {
+      fileString: List[RowString],
+      outputFileLocation: String,
+      badFileLocation: String,
+      currentDateTime: String,
+      inputFileName: String
+    ): Unit = {
       logger.info("An unrecognised file type has been encountered please see the bad output folder")
     }
   }
 
   protected def write(
-                       outputFileLocation: String,
-                       badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
-                     ): Unit = {
+    outputFileLocation: String,
+    badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
+  ): Unit = {
     printToFile(new File(s"$badFileLocation//$fileName")) { printWriter => badRowsList.foreach(rowString => (printWriter.println(rowString.content))) }
     printToFile(new File(s"$outputFileLocation//$fileName")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
   }
@@ -176,11 +173,11 @@ object FileImport extends FileImportTrait {
     logger.info("Received arguments " + args.toList.toString)
 
     args.toList match {
-      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: password :: Nil =>
-        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName, password)
+      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: Nil =>
+        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName)
         val workbook: HSSFWorkbook = fileAsWorkbook(s"$inputFileLocation//$inputFileName")
         val lineList: List[RowString] = readRows(workbook)
-        val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|"))
+        val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
         val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
         val user: FileImport.User = getUser(userIdIndicator)
         user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
@@ -189,12 +186,12 @@ object FileImport extends FileImportTrait {
   }
 
   private def validateInput(
-                             inputFileLocation: String,
-                             outputFileLocation: String,
-                             badFileLocation: String,
-                             inputFileName: String,
-                             password: String
-                           ) = {
+    inputFileLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String,
+    inputFileName: String
+
+  ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
