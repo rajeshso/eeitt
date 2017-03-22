@@ -96,12 +96,12 @@ trait FileImportTrait {
     }
 
     def partitionUserAndNonUserRecords(
-                                        rowsList: List[RowString],
-                                        outputFileLocation: String,
-                                        badFileLocation: String,
-                                        currentDateTime: String,
-                                        inputFileName: String
-                                      ): Unit = {
+      rowsList: List[RowString],
+      outputFileLocation: String,
+      badFileLocation: String,
+      currentDateTime: String,
+      inputFileName: String
+    ): Unit = {
       val rowsListExceptHeader: List[RowString] = rowsList.tail
       val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString =>
         rowString.content.split("\\|")).filter(cellArray =>
@@ -135,20 +135,20 @@ trait FileImportTrait {
     override val goodRecordFormatFunction = (cellsArray: CellsArray) => RowString("")
 
     override def partitionUserAndNonUserRecords(
-                                                 fileString: List[RowString],
-                                                 outputFileLocation: String,
-                                                 badFileLocation: String,
-                                                 currentDateTime: String,
-                                                 inputFileName: String
-                                               ): Unit = {
+      fileString: List[RowString],
+      outputFileLocation: String,
+      badFileLocation: String,
+      currentDateTime: String,
+      inputFileName: String
+    ): Unit = {
       logger.info("An unrecognised file type has been encountered please see the bad output folder")
     }
   }
 
   protected def write(
-                       outputFileLocation: String,
-                       badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
-                     ): Unit = {
+    outputFileLocation: String,
+    badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
+  ): Unit = {
     printToFile(new File(s"$badFileLocation//$fileName")) { printWriter => badRowsList.foreach(rowString => (printWriter.println(rowString.content))) }
     printToFile(new File(s"$outputFileLocation//$fileName")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
   }

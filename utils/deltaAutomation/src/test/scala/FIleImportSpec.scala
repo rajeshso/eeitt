@@ -101,11 +101,30 @@ class FIleImportSpec extends FlatSpec with Matchers {
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFileLocation(path, true, false) shouldBe true
   }
+
   "An Invalid file location" should "be verified and returned false" in {
     val inValidpath = "//ABC//DEF//GHI"
     val fileImport = FileImport
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFileLocation(inValidpath, true, false) shouldBe false
   }
+
+  "A directory path" should "not be considered a file, be verified and returned false" in {
+    val path = getClass.getResource("").getPath
+    val file = new File(path)
+    val fileImport = FileImport
+    fileImport.reInitLogger(Logger("TestFileImport"))
+    fileImport.isValidFile(file.getAbsolutePath) shouldBe false
+  }
+
+  "A file with invalid content " should "be verified and returned false" in {
+    val fileName: String = "/InvalidContentNonXLSX.xlsx"
+    val path = getClass.getResource(fileName).getPath
+    val file = new File(path)
+    val fileImport = FileImport
+    fileImport.reInitLogger(Logger("TestFileImport"))
+    fileImport.isValidFile(file.getAbsolutePath) shouldBe false
+  }
+
 }
 
