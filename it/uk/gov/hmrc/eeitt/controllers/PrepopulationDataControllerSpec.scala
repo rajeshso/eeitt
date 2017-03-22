@@ -1,5 +1,6 @@
 package uk.gov.hmrc.eeitt.controllers
 
+import org.scalatest.Ignore
 import org.scalatest.concurrent.ScalaFutures
 import play.api.Logger
 import play.api.http.Status
@@ -18,7 +19,8 @@ import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class PrepopulationDataControllerSpec extends UnitSpec with ApplicationComponentsOnePerSuiteIntegration with ScalaFutures {
+// ignore tests for ci-open, renmocve the ignore parameter for local testing
+class PrepopulationDataControllerSpec(ignore: String) extends UnitSpec with ApplicationComponentsOnePerSuiteIntegration with ScalaFutures {
 
   implicit val m = fakeApplication.materializer
   implicit val hc = HeaderCarrier()
