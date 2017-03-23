@@ -186,12 +186,11 @@ object FileImport extends FileImportTrait {
   }
 
   private def validateInput(
-    inputFileLocation: String,
-    outputFileLocation: String,
-    badFileLocation: String,
-    inputFileName: String
-
-  ) = {
+                             inputFileLocation: String,
+                             outputFileLocation: String,
+                             badFileLocation: String,
+                             inputFileName: String
+                           ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
