@@ -41,34 +41,35 @@ class FIleImportSpec extends FlatSpec with Matchers {
     new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
-  "filter agent user bad records" should "remove bad agent user records" in {
+  "filter agent user bad records" should "remove bad agent user records because the second cell is empty" in {
     val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
     val outputFileLocation: String = "src/test/"
-    val badFileLocation: String = "src/test/"
+    val badFileLocation: String = "src/test/resources/"
     val inputFileName: String = "testFile"
     val agentData: List[RowString] = List(
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
-      RowString("002| |ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
+      RowString("002||ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
     val parsedAgentData = FileImport.AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContents.toList should be(List("002| |||||||||BN12 4XL|GB|XAAP00000000007||||||||||non"))
+    fileContents.toList(0) should startWith("The second cell is empty|")
     new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
-  "filter business user bad records" should "remove the bad business user records" in {
+  "filter business user bad records" should "remove the bad business user records because its second cell is empty" in {
     val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
     val outputFileLocation: String = "src/test/"
-    val badFileLocation: String = "src/test/"
+    val badFileLocation: String = "src/test/resources/"
     val inputFileName: String = "testFile"
     val businessData: List[RowString] = List(
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
-      RowString("001| |ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
+      RowString("001||ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
     val parsedBusinessData = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContents.toList should be(List("001| |||||||||BN12 4XL|GB"))
+    fileContents.toList should be(List("The second cell is empty|001||ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
     new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
+    new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
   "Convert file to string" should "take an XSSFWorkbook and return a list of strings" in {
