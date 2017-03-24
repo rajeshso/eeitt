@@ -72,6 +72,40 @@ class FIleImportSpec extends FlatSpec with Matchers {
     new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
+  "filter business user bad records" should "remove the bad business user records because its third cell continues to be select" in {
+    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
+    val outputFileLocation: String = "src/test/"
+    val badFileLocation: String = "src/test/resources/"
+    val inputFileName: String = "testFile"
+    val businessData: List[RowString] = List(
+      RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
+      RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
+    )
+    val parsedBusinessData = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
+    fileContents.toList should be(List("The third cell has select as a value|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
+    new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
+  }
+
+  "filter business user good and bad records" should "filter the bad business user records because its third cell continues to be select, but the good one should pass" in {
+    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
+    val outputFileLocation: String = "src/test/"
+    val badFileLocation: String = "src/test/resources/"
+    val inputFileName: String = "testFile"
+    val businessData: List[RowString] = List(
+      RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
+      RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|"),
+      RowString("001|XQBD00000000|BINGO|Bingo Duty (BD)|7|Limited Company|Bingo||||BN12 4XL|GB|")
+    )
+    val parsedBusinessData = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val fileContentsBad = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
+    val fileContentsGood = Source.fromFile(outputFileLocation + currentDateTime + inputFileName + ".txt").getLines()
+    fileContentsBad.toList should be(List("The third cell has select as a value|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
+    fileContentsGood.toList should be(List("001|XQBD00000000|||||||||BN12 4XL|GB"))
+    new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
+    new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
+  }
+
   "Convert file to string" should "take an XSSFWorkbook and return a list of strings" in {
     val fileName: String = "/ValidFile.xls"
     val path = getClass.getResource(fileName).getPath
