@@ -90,6 +90,7 @@ trait FileImportTrait {
 
   sealed trait User {
     val name: String
+    val mandatorySizeOfCells: Int
     val goodRecordFormatFunction: (CellsArray) => RowString
     val badRecordFormatFunction = (cellsArray: CellsArray) => {
       (RowString(s"""${cellsArray.map(a => a.content).mkString("|")}"""))
@@ -106,10 +107,10 @@ trait FileImportTrait {
       val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString =>
         rowString.content.split("\\|")).filter(cellArray =>
         cellArray.length > 1).map(cellStringArray => cellStringArray.map(cellString => CellValue(cellString))).partition(cellArray =>
-        !(secondCellIsEmpty(cellArray) || thirdCellHasSelect(cellArray)))
+        !(mandatoryCellsMissing(cellArray) || thirdCellHasSelect(cellArray)))
 
       val badRowsWithReason: List[CellsArray] = badRows.map(cellsArray => cellsArray match {
-        case cellArray if secondCellIsEmpty(cellArray) => Array(CellValue("The second cell is empty")) ++ cellArray
+        case cellArray if mandatoryCellsMissing(cellArray) => Array(CellValue("The length of the cells should be " + mandatorySizeOfCells + " and second & third cells should be filled")) ++ cellArray
         case cellsArray if thirdCellHasSelect(cellsArray) => Array(CellValue("The third cell has select as a value")) ++ cellsArray
         case cellsArray: CellsArray => Array(CellValue("Unknown error")) ++ cellsArray
         case _ => Array(CellValue("Unknown Error - Unable to parse the line"))
@@ -122,26 +123,29 @@ trait FileImportTrait {
       logger.info("Succesful records parsed:" + goodRowsList.length)
       logger.info("Unsuccesful records parsed:" + badRowsList.length)
     }
-    def secondCellIsEmpty(cellsArray: CellsArray) : Boolean = cellsArray(1).content.length == 0
-    def thirdCellHasSelect(cellsArray: CellsArray) : Boolean = cellsArray(2).content == "select"
+    def thirdCellHasSelect(cellsArray: CellsArray): Boolean = cellsArray(2).content == "select"
+    def mandatoryCellsMissing(cellsArray: CellsArray): Boolean = cellsArray.length < mandatorySizeOfCells || cellsArray(1).content.length == 0 || cellsArray(2).content.length == 0
   }
 
   case object BusinessUser extends User {
-    val name: String = "001"
+    override val name: String = "001"
+    override val mandatorySizeOfCells: Int = 12
     override val goodRecordFormatFunction = (cellsArray: CellsArray) => {
       (RowString(s"""${cellsArray(0).content}|${cellsArray(1).content}|||||||||${cellsArray(10).content}|${cellsArray(11).content}"""))
     }
   }
 
   case object AgentUser extends User {
-    val name: String = "002"
+    override val name: String = "002"
+    override val mandatorySizeOfCells: Int = 23
     override val goodRecordFormatFunction = (cellsArray: CellsArray) => {
       (RowString(s"""${cellsArray(0).content}|${cellsArray(1).content}|||||||||${cellsArray(10).content}|${cellsArray(11).content}|${cellsArray(12).content}|||||||||${cellsArray(21).content}|${cellsArray(22).content}"""))
     }
   }
 
   case object UnsupportedUser extends User {
-    val name: String = "***"
+    override val name: String = "***"
+    override val mandatorySizeOfCells: Int = 0
     override val goodRecordFormatFunction = (cellsArray: CellsArray) => RowString("")
 
     override def partitionUserAndNonUserRecords(
@@ -159,8 +163,8 @@ trait FileImportTrait {
     outputFileLocation: String,
     badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
   ): Unit = {
-    if (badRowsList.size!=0) printToFile(new File(s"$badFileLocation//$fileName")) { printWriter => badRowsList.foreach(rowString => (printWriter.println(rowString.content))) }
-    if (goodRowsList.size!=0) printToFile(new File(s"$outputFileLocation//$fileName")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
+    if (badRowsList.size != 0) printToFile(new File(s"$badFileLocation//$fileName")) { printWriter => badRowsList.foreach(rowString => (printWriter.println(rowString.content))) }
+    if (goodRowsList.size != 0) printToFile(new File(s"$outputFileLocation//$fileName")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
   }
 
   def printToFile(f: File)(op: PrintWriter => Unit) = {

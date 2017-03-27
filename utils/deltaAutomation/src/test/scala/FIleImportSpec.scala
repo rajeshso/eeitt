@@ -52,7 +52,7 @@ class FIleImportSpec extends FlatSpec with Matchers {
     )
     val parsedAgentData = FileImport.AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContents.toList(0) should startWith("The second cell is empty|")
+    fileContents.toList(0) should startWith("The length of the cells should be 23 and second & third cells should be filled|")
     new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
@@ -67,7 +67,7 @@ class FIleImportSpec extends FlatSpec with Matchers {
     )
     val parsedBusinessData = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContents.toList should be(List("The second cell is empty|001||ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
+    fileContents.toList(0) should startWith("The length of the cells should be 12 and second & third cells should be filled")
     new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
     new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
