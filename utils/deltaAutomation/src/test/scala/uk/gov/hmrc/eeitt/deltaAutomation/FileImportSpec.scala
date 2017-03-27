@@ -9,7 +9,7 @@ import org.scalatest._
 
 import scala.io.Source
 
-class FIleImportSpec extends FlatSpec with Matchers {
+class FileImportSpec extends FlatSpec with Matchers {
 
   "filter business user" should "strip the headers from the file and output only the wanted fields of data into the file as well " in {
     val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
