@@ -1,7 +1,10 @@
+package uk.gov.hmrc.eeitt.deltaAutomation
+
 import java.io.{ File, PrintWriter }
 import java.nio.file.Files._
 import java.nio.file.{ Files, Path, Paths }
-import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.Date
 
 import com.typesafe.scalalogging.Logger
 import org.apache.poi.hssf.usermodel.{ HSSFSheet, HSSFWorkbook }
@@ -182,7 +185,7 @@ trait FileImportTrait {
 
 object FileImport extends FileImportTrait {
   def main(args: Array[String]): Unit = {
-    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
+    val currentDateTime: String = getCurrentTimeStamp
     logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
     logger.info("Received arguments " + args.toList.toString)
 
@@ -200,17 +203,22 @@ object FileImport extends FileImportTrait {
   }
 
   private def validateInput(
-                             inputFileLocation: String,
-                             outputFileLocation: String,
-                             badFileLocation: String,
-                             inputFileName: String
-                           ) = {
+    inputFileLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String,
+    inputFileName: String
+  ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
     else if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
     else
       logger.info("The input file was:" + inputFileName)
+  }
+
+  def getCurrentTimeStamp: String = {
+    val dateFormat = new SimpleDateFormat("EEEdMMMyyyy:HH:mm:ss.SSS")
+    dateFormat.format(new Date)
   }
 
   def reInitLogger(testLogger: Logger): Unit = {
