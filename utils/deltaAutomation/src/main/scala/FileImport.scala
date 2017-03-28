@@ -42,10 +42,10 @@ trait FileImportTrait {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - The program exits")
       false
-    } else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) {
+    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this method can throw a null and is dangerous
       logger.error(s"Incorrent File Content in $file - The program exits")
       false
-    } else {
+    }*/ else {
       Try(new NPOIFSFileSystem(new File(s"$file"), true)) match {
         case Success(_) => true
         case Failure(e) => {
@@ -163,8 +163,8 @@ trait FileImportTrait {
     outputFileLocation: String,
     badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
   ): Unit = {
-    if (badRowsList.size != 0) printToFile(new File(s"$badFileLocation//$fileName")) { printWriter => badRowsList.foreach(rowString => (printWriter.println(rowString.content))) }
-    if (goodRowsList.size != 0) printToFile(new File(s"$outputFileLocation//$fileName")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
+    if (badRowsList.size != 0) printToFile(new File(s"$badFileLocation/file")) { printWriter => badRowsList.foreach(rowString => (printWriter.println(rowString.content))) } //TODO can not name a file with two conflicting extensions in windows(.xls.txt doesn't work in windows)
+    if (goodRowsList.size != 0) printToFile(new File(s"$outputFileLocation/file")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
   }
 
   def printToFile(f: File)(op: PrintWriter => Unit) = {
@@ -189,7 +189,7 @@ object FileImport extends FileImportTrait {
     args.toList match {
       case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: Nil =>
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName)
-        val workbook: HSSFWorkbook = fileAsWorkbook(s"$inputFileLocation//$inputFileName")
+        val workbook: HSSFWorkbook = fileAsWorkbook(s"$inputFileLocation/$inputFileName")
         val lineList: List[RowString] = readRows(workbook)
         val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
         val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
@@ -200,15 +200,15 @@ object FileImport extends FileImportTrait {
   }
 
   private def validateInput(
-                             inputFileLocation: String,
-                             outputFileLocation: String,
-                             badFileLocation: String,
-                             inputFileName: String
-                           ) = {
+    inputFileLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String,
+    inputFileName: String
+  ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
-    else if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
+    else if (!isValidFile(s"$inputFileLocation/$inputFileName")) System.exit(0)
     else
       logger.info("The input file was:" + inputFileName)
   }
