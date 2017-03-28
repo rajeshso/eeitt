@@ -169,11 +169,13 @@ trait FileImportTrait {
 
   protected def write(
     outputFileLocation: String,
-    badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
+    badFileLocation: String,
+    goodRowsList: List[RowString],
+    badRowsList: List[RowString],
+    fileName: String
   ): Unit = {
     writeRows(s"$badFileLocation//$fileName", badRowsList)
     writeRows(s"$outputFileLocation//$fileName", goodRowsList)
-    //if (goodRowsList.size != 0) printToFile(new File(s"$outputFileLocation//$fileName")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
   }
 
   private def writeRows(file: String, rowStrings: List[RowString]) = {
