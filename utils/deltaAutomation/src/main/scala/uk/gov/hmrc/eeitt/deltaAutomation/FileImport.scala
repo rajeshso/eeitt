@@ -45,7 +45,7 @@ trait FileImportTrait {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - The program exits")
       false
-    } else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) {
+    } else if (Files.probeContentType(path) != ("application/vnd.ms-excel")) {
       logger.error(s"Incorrent File Content in $file - The program exits")
       false
     } else {
@@ -71,12 +71,8 @@ trait FileImportTrait {
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
       val cells: Iterator[Cell] = row.cellIterator()
-      val listOfCells: IndexedSeq[String] = for { cell <- 0 to (maxNumOfCells) } yield {
-        if (row.getCell(cell) == null) {
-          ""
-        } else {
-          row.getCell(cell).toString
-        }
+      val listOfCells: IndexedSeq[String] = for { cell <- 0 to maxNumOfCells } yield {
+        Option(row.getCell(cell)).map(_.toString).getOrElse("")
       }
       rowBuffer += RowString(listOfCells.mkString("|"))
     }
@@ -113,10 +109,15 @@ trait FileImportTrait {
         !(mandatoryCellsMissing(cellArray) || thirdCellHasSelect(cellArray)))
 
       val badRowsWithReason: List[CellsArray] = badRows.map(cellsArray => cellsArray match {
-        case cellArray if mandatoryCellsMissing(cellArray) => Array(CellValue("The length of the cells should be " + mandatorySizeOfCells + " and second & third cells should be filled")) ++ cellArray
-        case cellsArray if thirdCellHasSelect(cellsArray) => Array(CellValue("The third cell has select as a value")) ++ cellsArray
+        case cellArray if mandatoryCellsMissing(cellArray) => Array(
+          CellValue("The length of the cells should be " + mandatorySizeOfCells +
+            " and second & third cells should be filled")
+        ) ++
+          cellArray
+        case cellsArray if thirdCellHasSelect(cellsArray) => Array(
+          CellValue("The third cell has select as a value")
+        ) ++ cellsArray
         case cellsArray: CellsArray => Array(CellValue("Unknown error")) ++ cellsArray
-        case _ => Array(CellValue("Unknown Error - Unable to parse the line"))
       })
 
       val goodRowsList: List[RowString] = goodRows.map(goodRecordFormatFunction)
@@ -126,8 +127,12 @@ trait FileImportTrait {
       logger.info("Succesful records parsed:" + goodRowsList.length)
       logger.info("Unsuccesful records parsed:" + badRowsList.length)
     }
+
     def thirdCellHasSelect(cellsArray: CellsArray): Boolean = cellsArray(2).content == "select"
-    def mandatoryCellsMissing(cellsArray: CellsArray): Boolean = cellsArray.length < mandatorySizeOfCells || cellsArray(1).content.length == 0 || cellsArray(2).content.length == 0
+
+    def mandatoryCellsMissing(cellsArray: CellsArray): Boolean = cellsArray.length < mandatorySizeOfCells ||
+      cellsArray(1).content.isEmpty ||
+      cellsArray(2).content.isEmpty
   }
 
   case object BusinessUser extends User {
@@ -166,8 +171,13 @@ trait FileImportTrait {
     outputFileLocation: String,
     badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
   ): Unit = {
-    if (badRowsList.size != 0) printToFile(new File(s"$badFileLocation//$fileName")) { printWriter => badRowsList.foreach(rowString => (printWriter.println(rowString.content))) }
-    if (goodRowsList.size != 0) printToFile(new File(s"$outputFileLocation//$fileName")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
+    writeRows(s"$badFileLocation//$fileName", badRowsList)
+    writeRows(s"$outputFileLocation//$fileName", goodRowsList)
+    //if (goodRowsList.size != 0) printToFile(new File(s"$outputFileLocation//$fileName")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
+  }
+
+  private def writeRows(file: String, rowStrings: List[RowString]) = {
+    if (rowStrings.size != 0) printToFile(new File(file)) { printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) }
   }
 
   def printToFile(f: File)(op: PrintWriter => Unit) = {
