@@ -1,21 +1,18 @@
 package uk.gov.hmrc.eeitt.deltaAutomation
 
-import java.io.{ File, PrintWriter }
+import java.io.{File, PrintWriter}
 import java.nio.file.Files._
-import java.nio.file.{ Files, Path, Paths }
+import java.nio.file.{Path, Paths}
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util
+import java.util.Date
 
-import org.apache.poi.ss.usermodel._
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.filesystem.{ NPOIFSFileSystem, POIFSFileSystem }
-import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook }
-import org.apache.poi.xssf.usermodel.{ XSSFSheet, XSSFWorkbook }
+import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 case class RowString(content: String) extends AnyVal
 case class CellValue(content: String) extends AnyVal
