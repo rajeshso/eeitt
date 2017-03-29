@@ -84,7 +84,7 @@ class FileImportSpec extends FlatSpec with Matchers {
     )
     val parsedBusinessData = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContents.toList should be(List("The third cell has select as a value|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
+    fileContents.toList should be(List("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
     new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
@@ -101,7 +101,7 @@ class FileImportSpec extends FlatSpec with Matchers {
     val parsedBusinessData = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     val fileContentsBad = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
     val fileContentsGood = Source.fromFile(outputFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContentsBad.toList should be(List("The third cell has select as a value|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
+    fileContentsBad.toList should be(List("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
     fileContentsGood.toList should be(List("001|XQBD00000000|||||||||BN12 4XL|GB"))
     new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
     new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()

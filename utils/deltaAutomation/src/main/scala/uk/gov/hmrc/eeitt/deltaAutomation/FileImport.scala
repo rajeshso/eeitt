@@ -5,6 +5,7 @@ import java.nio.file.Files._
 import java.nio.file.{ Files, Path, Paths }
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util
 
 import com.typesafe.scalalogging.Logger
 import org.apache.poi.hssf.usermodel.{ HSSFSheet, HSSFWorkbook }
@@ -67,10 +68,10 @@ trait FileImportTrait {
   def readRows(workBook: HSSFWorkbook): List[RowString] = {
     val sheet: HSSFSheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
-    val rows: Iterator[Row] = sheet.rowIterator()
+    val rows: util.Iterator[Row] = sheet.rowIterator()
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
-      val cells: Iterator[Cell] = row.cellIterator()
+      val cells: util.Iterator[Cell] = row.cellIterator()
       val listOfCells: IndexedSeq[String] = for { cell <- 0 to maxNumOfCells } yield {
         Option(row.getCell(cell)).map(_.toString).getOrElse("")
       }
@@ -115,7 +116,7 @@ trait FileImportTrait {
         ) ++
           cellArray
         case cellsArray if thirdCellHasSelect(cellsArray) => Array(
-          CellValue("The third cell has select as a value")
+          CellValue("The third cell is unselected")
         ) ++ cellsArray
         case cellsArray: CellsArray => Array(CellValue("Unknown error")) ++ cellsArray
       })
@@ -204,7 +205,7 @@ object FileImport extends FileImportTrait {
     args.toList match {
       case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: Nil =>
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName)
-        val workbook: HSSFWorkbook = fileAsWorkbook(s"$inputFileLocation//$inputFileName")
+        val workbook: HSSFWorkbook = fileAsWorkbook(s"$inputFileLocation/$inputFileName")
         val lineList: List[RowString] = readRows(workbook)
         val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
         val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
