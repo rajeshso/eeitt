@@ -1,18 +1,18 @@
 package uk.gov.hmrc.eeitt.deltaAutomation
 
-import java.io.{File, PrintWriter}
+import java.io.{ File, PrintWriter }
 import java.nio.file.Files._
-import java.nio.file.{Path, Paths}
+import java.nio.file.{ Path, Paths }
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
+import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 case class RowString(content: String) extends AnyVal
 case class CellValue(content: String) extends AnyVal
@@ -204,7 +204,7 @@ object FileImport extends FileImportTrait {
     args.toList match {
       case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: Nil =>
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName)
-        val workbook: Workbook = fileAsWorkbook(s"$inputFileLocation//$inputFileName")
+        val workbook: Workbook = fileAsWorkbook(s"$inputFileLocation/$inputFileName")
         val lineList: List[RowString] = readRows(workbook)
         val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
         val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
@@ -229,7 +229,7 @@ object FileImport extends FileImportTrait {
   }
 
   def getCurrentTimeStamp: String = {
-    val dateFormat = new SimpleDateFormat("EEEdMMMyyyy:HH:mm:ss.SSS")
+    val dateFormat = new SimpleDateFormat("EEEdMMMyyyy.HH.mm.ss.SSS")
     dateFormat.format(new Date)
   }
 
