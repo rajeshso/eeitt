@@ -5,11 +5,13 @@ import java.nio.file.Files._
 import java.nio.file.{ Files, Path, Paths }
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util
 
+import org.apache.poi.ss.usermodel._
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.hssf.usermodel.{ HSSFSheet, HSSFWorkbook }
-import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{ Cell, Row }
+import org.apache.poi.poifs.filesystem.{ NPOIFSFileSystem, POIFSFileSystem }
+import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook }
+import org.apache.poi.xssf.usermodel.{ XSSFSheet, XSSFWorkbook }
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
@@ -49,7 +51,7 @@ trait FileImportTrait {
       logger.error(s"Incorrent File Content in $file - The program exits")
       false
     }*/ else {
-      Try(new NPOIFSFileSystem(new File(s"$file"), true)) match {
+      Try(WorkbookFactory.create(new File(s"$file"))) match {
         case Success(_) => true
         case Failure(e) => {
           logger.error(s"Incorrent File Content in $file ${e.getMessage}- The program exits")
@@ -59,24 +61,21 @@ trait FileImportTrait {
     }
   }
 
-  def fileAsWorkbook(fileLocation: String): HSSFWorkbook = {
-    val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), false)
-    new HSSFWorkbook(fileSystem)
+  def fileAsWorkbook(fileLocation: String): Workbook = {
+    val fileSystem = WorkbookFactory.create(new File(s"$fileLocation"))
+    fileSystem
+
   }
 
-  def readRows(workBook: HSSFWorkbook): List[RowString] = {
-    val sheet: HSSFSheet = workBook.getSheetAt(0)
+  def readRows(workBook: Workbook): List[RowString] = {
+    val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
-    val rows: Iterator[Row] = sheet.rowIterator()
+    val rows: util.Iterator[Row] = sheet.rowIterator()
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
-      val cells: Iterator[Cell] = row.cellIterator()
-      val listOfCells: IndexedSeq[String] = for { cell <- 0 to (maxNumOfCells) } yield {
-        if (row.getCell(cell) == null) {
-          ""
-        } else {
-          row.getCell(cell).toString
-        }
+      val cells: util.Iterator[Cell] = row.cellIterator()
+      val listOfCells: IndexedSeq[String] = for { cell <- 0 to maxNumOfCells } yield {
+        Option(row.getCell(cell)).map(_.toString).getOrElse("")
       }
       rowBuffer += RowString(listOfCells.mkString("|"))
     }
@@ -113,10 +112,15 @@ trait FileImportTrait {
         !(mandatoryCellsMissing(cellArray) || thirdCellHasSelect(cellArray)))
 
       val badRowsWithReason: List[CellsArray] = badRows.map(cellsArray => cellsArray match {
-        case cellArray if mandatoryCellsMissing(cellArray) => Array(CellValue("The length of the cells should be " + mandatorySizeOfCells + " and second & third cells should be filled")) ++ cellArray
-        case cellsArray if thirdCellHasSelect(cellsArray) => Array(CellValue("The third cell has select as a value")) ++ cellsArray
+        case cellArray if mandatoryCellsMissing(cellArray) => Array(
+          CellValue("The length of the cells should be " + mandatorySizeOfCells +
+            " and second & third cells should be filled")
+        ) ++
+          cellArray
+        case cellsArray if thirdCellHasSelect(cellsArray) => Array(
+          CellValue("The third cell is unselected")
+        ) ++ cellsArray
         case cellsArray: CellsArray => Array(CellValue("Unknown error")) ++ cellsArray
-        case _ => Array(CellValue("Unknown Error - Unable to parse the line"))
       })
 
       val goodRowsList: List[RowString] = goodRows.map(goodRecordFormatFunction)
@@ -126,8 +130,12 @@ trait FileImportTrait {
       logger.info("Succesful records parsed:" + goodRowsList.length)
       logger.info("Unsuccesful records parsed:" + badRowsList.length)
     }
+
     def thirdCellHasSelect(cellsArray: CellsArray): Boolean = cellsArray(2).content == "select"
-    def mandatoryCellsMissing(cellsArray: CellsArray): Boolean = cellsArray.length < mandatorySizeOfCells || cellsArray(1).content.length == 0 || cellsArray(2).content.length == 0
+
+    def mandatoryCellsMissing(cellsArray: CellsArray): Boolean = cellsArray.length < mandatorySizeOfCells ||
+      cellsArray(1).content.isEmpty ||
+      cellsArray(2).content.isEmpty
   }
 
   case object BusinessUser extends User {
@@ -164,10 +172,17 @@ trait FileImportTrait {
 
   protected def write(
     outputFileLocation: String,
-    badFileLocation: String, goodRowsList: List[RowString], badRowsList: List[RowString], fileName: String
+    badFileLocation: String,
+    goodRowsList: List[RowString],
+    badRowsList: List[RowString],
+    fileName: String
   ): Unit = {
-    if (badRowsList.size != 0) printToFile(new File(s"$badFileLocation/file")) { printWriter => badRowsList.foreach(rowString => (printWriter.println(rowString.content))) } //TODO can not name a file with two conflicting extensions in windows(.xls.txt doesn't work in windows)
-    if (goodRowsList.size != 0) printToFile(new File(s"$outputFileLocation/file")) { printWriter => goodRowsList.foreach(rowString => printWriter.println(rowString.content)) }
+    writeRows(s"$badFileLocation/$fileName", badRowsList)
+    writeRows(s"$outputFileLocation/$fileName", goodRowsList)
+  }
+
+  private def writeRows(file: String, rowStrings: List[RowString]) = {
+    if (rowStrings.size != 0) printToFile(new File(file)) { printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) }
   }
 
   def printToFile(f: File)(op: PrintWriter => Unit) = {
@@ -192,7 +207,7 @@ object FileImport extends FileImportTrait {
     args.toList match {
       case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: Nil =>
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName)
-        val workbook: HSSFWorkbook = fileAsWorkbook(s"$inputFileLocation/$inputFileName")
+        val workbook: Workbook = fileAsWorkbook(s"$inputFileLocation//$inputFileName")
         val lineList: List[RowString] = readRows(workbook)
         val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
         val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
