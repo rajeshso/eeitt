@@ -122,7 +122,7 @@ trait FileImportTrait {
 
       val goodRowsList: List[RowString] = goodRows.map(goodRecordFormatFunction)
       val badRowsList: List[RowString] = badRowsWithReason.map(badRecordFormatFunction)
-      val fileName: String = currentDateTime + inputFileName + ".txt"
+      val fileName: String = currentDateTime + inputFileName
       write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
       logger.info("Succesful records parsed:" + goodRowsList.length)
       logger.info("Unsuccesful records parsed:" + badRowsList.length)
@@ -174,8 +174,8 @@ trait FileImportTrait {
     badRowsList: List[RowString],
     fileName: String
   ): Unit = {
-    writeRows(s"$badFileLocation/$fileName", badRowsList)
-    writeRows(s"$outputFileLocation/$fileName", goodRowsList)
+    writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList)
+    writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList)
   }
 
   private def writeRows(file: String, rowStrings: List[RowString]) = {
