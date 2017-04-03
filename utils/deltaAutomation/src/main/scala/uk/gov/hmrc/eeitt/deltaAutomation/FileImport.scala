@@ -2,7 +2,7 @@ package uk.gov.hmrc.eeitt.deltaAutomation
 
 import java.io.{ File, PrintWriter }
 import java.nio.file.Files._
-import java.nio.file.{ Files, Path, Paths }
+import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util
@@ -21,6 +21,15 @@ case class CellValue(content: String) extends AnyVal
 trait FileImportTrait {
   var logger = Logger("FileImport")
   type CellsArray = Array[CellValue]
+
+  def getListOfFiles(dirName: String): List[File] = {
+    val directory = new File(dirName)
+    if (directory.exists && directory.isDirectory) {
+      directory.listFiles.filter(_.isFile).toList
+    } else {
+      List[File]()
+    }
+  }
 
   def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
     val path: Path = Paths.get(fileLocation)
@@ -41,19 +50,19 @@ trait FileImportTrait {
   def isValidFile(file: String): Boolean = {
     val path: Path = Paths.get(file)
     if (!exists(path) || !isRegularFile(path)) {
-      logger.error(s"Invalid filelocation in $file - The program exits")
+      logger.error(s"Invalid filelocation in $file - This file is not processed")
       false
     } else if (!isReadable(path)) {
-      logger.error(s"Unable to read from $file - The program exits")
+      logger.error(s"Unable to read from $file - This file is not processed")
       false
     } else if (Files.probeContentType(path) != ("application/vnd.ms-excel")) {
-      logger.error(s"Incorrent File Content in $file - The program exits")
+      logger.error(s"Incorrent File Content in $file - This file is not processed")
       false
     } else {
       Try(new NPOIFSFileSystem(new File(s"$file"), true)) match {
         case Success(_) => true
         case Failure(e) => {
-          logger.error(s"Incorrent File Content in $file ${e.getMessage}- The program exits")
+          logger.error(s"Incorrent File Content in $file ${e.getMessage} - This file is not processed")
           false
         }
       }
@@ -175,19 +184,19 @@ trait FileImportTrait {
     badRowsList: List[RowString],
     fileName: String
   ): Unit = {
-    writeRows(s"$badFileLocation//$fileName", badRowsList)
-    writeRows(s"$outputFileLocation//$fileName", goodRowsList)
+    writeRows(s"$badFileLocation//$fileName", badRowsList, "Incorrect Rows ")
+    writeRows(s"$outputFileLocation//$fileName", goodRowsList, "Correct Rows ")
   }
 
-  private def writeRows(file: String, rowStrings: List[RowString]) = {
-    if (rowStrings.size != 0) printToFile(new File(file)) { printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) }
+  private def writeRows(file: String, rowStrings: List[RowString], label: String) = {
+    if (rowStrings.size != 0) printToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) })
   }
 
-  def printToFile(f: File)(op: PrintWriter => Unit) = {
+  def printToFile(f: File, label: String)(op: (PrintWriter) => Unit): Unit = {
     val writer: PrintWriter = new PrintWriter(f)
     try {
       op(writer)
-      logger.info("The output file is " + f.getAbsoluteFile)
+      logger.info(s"The file with $label is " + f.getAbsoluteFile)
     } catch {
       case e: Throwable => logger.error(e.getMessage)
     } finally {
@@ -203,14 +212,18 @@ object FileImport extends FileImportTrait {
     logger.info("Received arguments " + args.toList.toString)
 
     args.toList match {
-      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileName :: Nil =>
-        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileName)
-        val workbook: HSSFWorkbook = fileAsWorkbook(s"$inputFileLocation/$inputFileName")
-        val lineList: List[RowString] = readRows(workbook)
-        val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
-        val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
-        val user: FileImport.User = getUser(userIdIndicator)
-        user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileArchiveLocation :: Nil =>
+        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
+        val files: List[File] = getListOfFiles(inputFileLocation)
+        for (file <- files if isValidFile(file.getCanonicalPath)) {
+          val workbook: HSSFWorkbook = fileAsWorkbook(file.getCanonicalPath)
+          val lineList: List[RowString] = readRows(workbook)
+          val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+          val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+          val user: FileImport.User = getUser(userIdIndicator)
+          user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
+          Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+        }
       case _ => logger.error("Incorrect number of arguments supplied. The program exits.")
     }
   }
@@ -219,14 +232,14 @@ object FileImport extends FileImportTrait {
     inputFileLocation: String,
     outputFileLocation: String,
     badFileLocation: String,
-    inputFileName: String
+    inputFileArchiveLocation: String
   ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
-    else if (!isValidFile(s"$inputFileLocation//$inputFileName")) System.exit(0)
+    else if (!isValidFileLocation(inputFileArchiveLocation, false, true)) System.exit(0)
     else
-      logger.info("The input file was:" + inputFileName)
+      logger.info("The input file is:" + inputFileArchiveLocation)
   }
 
   def getCurrentTimeStamp: String = {

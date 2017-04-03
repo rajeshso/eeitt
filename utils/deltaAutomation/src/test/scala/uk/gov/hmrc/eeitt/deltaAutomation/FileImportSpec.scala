@@ -123,7 +123,7 @@ class FileImportSpec extends FlatSpec with Matchers {
     val file = new File(fileName)
     val writer = new PrintWriter(file)
     val oneToTen: List[Int] = List.range(1, 10)
-    FileImport.printToFile(file) { writer => oneToTen.foreach(writer.println) }
+    FileImport.printToFile(file, "TestOutputFile")({ writer => oneToTen.foreach(writer.println) })
     val i = Source.fromFile(fileName).getLines.flatMap { line =>
       line.split(" ").map(_.toInt)
     }.toList
