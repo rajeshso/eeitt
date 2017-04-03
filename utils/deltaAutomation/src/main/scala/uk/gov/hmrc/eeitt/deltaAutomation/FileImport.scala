@@ -215,11 +215,11 @@ object FileImport extends FileImportTrait {
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
         val files: List[File] = getListOfFiles(inputFileLocation)
         for (file <- files if isValidFile(file.getCanonicalPath)) {
-        val workbook: Workbook = fileAsWorkbook(file.getCanonicalPath)
-        val lineList: List[RowString] = readRows(workbook)
-        val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
-        val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
-        val user: FileImport.User = getUser(userIdIndicator)
+          val workbook: Workbook = fileAsWorkbook(file.getCanonicalPath)
+          val lineList: List[RowString] = readRows(workbook)
+          val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+          val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+          val user: FileImport.User = getUser(userIdIndicator)
           user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
           Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
         }

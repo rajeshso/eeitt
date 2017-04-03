@@ -21,9 +21,9 @@ class FileImportSpec extends FlatSpec with Matchers {
       RowString("001|XPGD0000010088|ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
     val parsedBusinessUser = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessUserData, outputFileLocation, badFileLocation, currentDateTime, outputFileName)
-    val fileContents = Source.fromFile(outputFileLocation + currentDateTime + outputFileName).getLines()
+    val fileContents = Source.fromFile(outputFileLocation + currentDateTime + outputFileName + ".txt").getLines()
     fileContents.toList should be(List("001|XPGD0000010088|||||||||BN12 4XL|GB"))
-    new File(outputFileLocation + currentDateTime + outputFileName).delete()
+    new File(outputFileLocation + currentDateTime + outputFileName + ".txt").delete()
   }
 
   "filter agent user" should "strip the headers from the file and output only the wanted fields of data into the file" in {
@@ -37,9 +37,9 @@ class FileImportSpec extends FlatSpec with Matchers {
       RowString("002|ZARN0000627|ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
     val parsedAgentData = FileImport.AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    val fileContents = Source.fromFile(outputFileLocation + currentDateTime + inputFileName).getLines()
+    val fileContents = Source.fromFile(outputFileLocation + currentDateTime + inputFileName + ".txt").getLines()
     fileContents.toList should be(List("002|ZARN0000627|||||||||BN12 4XL|GB|XAAP00000000007||||||||||non"))
-    new File(outputFileLocation + currentDateTime + inputFileName).delete()
+    new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
   "filter agent user bad records" should "remove bad agent user records because the second cell is empty" in {
@@ -52,9 +52,9 @@ class FileImportSpec extends FlatSpec with Matchers {
       RowString("002||ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
     val parsedAgentData = FileImport.AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName).getLines()
+    val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
     fileContents.toList(0) should startWith("The length of the cells should be 23 and second & third cells should be filled|")
-    new File(badFileLocation + currentDateTime + inputFileName).delete()
+    new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
   "filter business user bad records" should "remove the bad business user records because its second cell is empty" in {
@@ -67,10 +67,10 @@ class FileImportSpec extends FlatSpec with Matchers {
       RowString("001||ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
     val parsedBusinessData = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName).getLines()
+    val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
     fileContents.toList(0) should startWith("The length of the cells should be 12 and second & third cells should be filled")
-    new File(badFileLocation + currentDateTime + inputFileName).delete()
-    new File(outputFileLocation + currentDateTime + inputFileName).delete()
+    new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
+    new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
   "filter business user bad records" should "remove the bad business user records because its third cell continues to be select" in {
@@ -83,9 +83,9 @@ class FileImportSpec extends FlatSpec with Matchers {
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
     val parsedBusinessData = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName).getLines()
+    val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
     fileContents.toList should be(List("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
-    new File(badFileLocation + currentDateTime + inputFileName).delete()
+    new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
   "filter business user good and bad records" should "filter the bad business user records because its third cell continues to be select, but the good one should pass" in {
@@ -99,12 +99,12 @@ class FileImportSpec extends FlatSpec with Matchers {
       RowString("001|XQBD00000000|BINGO|Bingo Duty (BD)|7|Limited Company|Bingo||||BN12 4XL|GB|")
     )
     val parsedBusinessData = FileImport.BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    val fileContentsBad = Source.fromFile(badFileLocation + currentDateTime + inputFileName).getLines()
-    val fileContentsGood = Source.fromFile(outputFileLocation + currentDateTime + inputFileName).getLines()
+    val fileContentsBad = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
+    val fileContentsGood = Source.fromFile(outputFileLocation + currentDateTime + inputFileName + ".txt").getLines()
     fileContentsBad.toList should be(List("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
     fileContentsGood.toList should be(List("001|XQBD00000000|||||||||BN12 4XL|GB"))
-    new File(badFileLocation + currentDateTime + inputFileName).delete()
-    new File(outputFileLocation + currentDateTime + inputFileName).delete()
+    new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
+    new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
   "Convert file to string" should "take an XSSFWorkbook and return a list of strings" in {
