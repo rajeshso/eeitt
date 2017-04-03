@@ -18,6 +18,14 @@ DELETE     /eeitt/prepopulation/:cacheId
 
 See eeitt.raml for more formal detail
 
+## Pre-population integration tests
+
+When you run sbt it:test, it will fail with:
+
+    [info]   java.net.ConnectException: Connection refused: localhost/127.0.0.1:8085
+
+unless you first run smserver
+
 ### License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")

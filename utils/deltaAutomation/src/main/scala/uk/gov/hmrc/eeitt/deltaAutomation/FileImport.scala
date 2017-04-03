@@ -8,9 +8,7 @@ import java.util.Date
 import java.util
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.hssf.usermodel.{ HSSFSheet, HSSFWorkbook }
-import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{ Cell, Row }
+import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
@@ -55,11 +53,11 @@ trait FileImportTrait {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - This file is not processed")
       false
-    } else if (Files.probeContentType(path) != ("application/vnd.ms-excel")) {
-      logger.error(s"Incorrent File Content in $file - This file is not processed")
+    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this method can throw a null and is dangerous
+      logger.error(s"Incorrent File Content in $file - The program exits")
       false
-    } else {
-      Try(new NPOIFSFileSystem(new File(s"$file"), true)) match {
+    }*/ else {
+      Try(WorkbookFactory.create(new File(s"$file"))) match {
         case Success(_) => true
         case Failure(e) => {
           logger.error(s"Incorrent File Content in $file ${e.getMessage} - This file is not processed")
@@ -69,13 +67,14 @@ trait FileImportTrait {
     }
   }
 
-  def fileAsWorkbook(fileLocation: String): HSSFWorkbook = {
-    val fileSystem: NPOIFSFileSystem = new NPOIFSFileSystem(new File(s"$fileLocation"), false)
-    new HSSFWorkbook(fileSystem)
+  def fileAsWorkbook(fileLocation: String): Workbook = {
+    val fileSystem = WorkbookFactory.create(new File(s"$fileLocation"))
+    fileSystem
+
   }
 
-  def readRows(workBook: HSSFWorkbook): List[RowString] = {
-    val sheet: HSSFSheet = workBook.getSheetAt(0)
+  def readRows(workBook: Workbook): List[RowString] = {
+    val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
     val rows: util.Iterator[Row] = sheet.rowIterator()
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
@@ -184,8 +183,8 @@ trait FileImportTrait {
     badRowsList: List[RowString],
     fileName: String
   ): Unit = {
-    writeRows(s"$badFileLocation//$fileName", badRowsList, "Incorrect Rows ")
-    writeRows(s"$outputFileLocation//$fileName", goodRowsList, "Correct Rows ")
+    writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
+    writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
   }
 
   private def writeRows(file: String, rowStrings: List[RowString], label: String) = {
@@ -216,11 +215,11 @@ object FileImport extends FileImportTrait {
         validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
         val files: List[File] = getListOfFiles(inputFileLocation)
         for (file <- files if isValidFile(file.getCanonicalPath)) {
-          val workbook: HSSFWorkbook = fileAsWorkbook(file.getCanonicalPath)
-          val lineList: List[RowString] = readRows(workbook)
-          val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
-          val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
-          val user: FileImport.User = getUser(userIdIndicator)
+        val workbook: Workbook = fileAsWorkbook(file.getCanonicalPath)
+        val lineList: List[RowString] = readRows(workbook)
+        val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+        val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+        val user: FileImport.User = getUser(userIdIndicator)
           user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
           Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
         }
@@ -243,7 +242,7 @@ object FileImport extends FileImportTrait {
   }
 
   def getCurrentTimeStamp: String = {
-    val dateFormat = new SimpleDateFormat("EEEdMMMyyyy:HH:mm:ss.SSS")
+    val dateFormat = new SimpleDateFormat("EEEdMMMyyyy.HH.mm.ss.SSS")
     dateFormat.format(new Date)
   }
 
