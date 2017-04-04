@@ -9,6 +9,7 @@ import java.util
 
 import com.typesafe.scalalogging.Logger
 import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
+import services.GmailService
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
@@ -206,25 +207,29 @@ trait FileImportTrait {
 
 object FileImport extends FileImportTrait {
   def main(args: Array[String]): Unit = {
-    val currentDateTime: String = getCurrentTimeStamp
-    logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
-    logger.info("Received arguments " + args.toList.toString)
 
-    args.toList match {
-      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileArchiveLocation :: Nil =>
-        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
-        val files: List[File] = getListOfFiles(inputFileLocation)
-        for (file <- files if isValidFile(file.getCanonicalPath)) {
-          val workbook: Workbook = fileAsWorkbook(file.getCanonicalPath)
-          val lineList: List[RowString] = readRows(workbook)
-          val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
-          val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
-          val user: FileImport.User = getUser(userIdIndicator)
-          user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
-          Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
-        }
-      case _ => logger.error("Incorrect number of arguments supplied. The program exits.")
-    }
+    val gmail = new GmailService
+    println(gmail.isNewFile)
+    //    println(gmail.configureWatch)
+    //    val currentDateTime: String = getCurrentTimeStamp
+    //    logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+    //    logger.info("Received arguments " + args.toList.toString)
+    //
+    //    args.toList match {
+    //      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileArchiveLocation :: Nil =>
+    //        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
+    //        val files: List[File] = getListOfFiles(inputFileLocation)
+    //        for (file <- files if isValidFile(file.getCanonicalPath)) {
+    //          val workbook: Workbook = fileAsWorkbook(file.getCanonicalPath)
+    //          val lineList: List[RowString] = readRows(workbook)
+    //          val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+    //          val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+    //          val user: FileImport.User = getUser(userIdIndicator)
+    //          user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
+    //          Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+    //        }
+    //      case _ => logger.error("Incorrect number of arguments supplied. The program exits.")
+    //    }
   }
 
   private def validateInput(
