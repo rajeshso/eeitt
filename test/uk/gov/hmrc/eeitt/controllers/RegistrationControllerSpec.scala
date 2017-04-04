@@ -135,7 +135,7 @@ class RegistrationControllerSpec extends UnitSpec with Inside with EtmpFixtures 
       val addRegistrationCheck = mock[AddRegistrationCheck]
       val findRegistrationCheck = mock[FindRegistrationCheck]
 
-      val fakeRequest = FakeRequest(Helpers.POST, "/register").withBody(toJson(RegisterAgentRequest(GroupId("1"), Arn("1234567890ABCDE"), Some(Postcode("SE39EPX")))))
+      val fakeRequest = FakeRequest(Helpers.POST, "/register").withBody(toJson(RegisterAgentRequest(GroupId("1"), Arn(" 1234567890ABCDe "), Some(Postcode("SE39EPx")))))
 
       val messages = messagesApiDefault.preferred(fakeRequest)
 
@@ -156,7 +156,7 @@ class RegistrationControllerSpec extends UnitSpec with Inside with EtmpFixtures 
             case RegisterAgentRequest(groupId, arn, postcode) =>
               groupId.value should be("1")
               arn.value should be("1234567890ABCDE")
-              convertOptionToValuable(postcode).value.value should be("SE39EPX")
+              convertOptionToValuable(postcode).value.value should be("SE39EPx")
           }
         }
 
@@ -164,7 +164,7 @@ class RegistrationControllerSpec extends UnitSpec with Inside with EtmpFixtures 
         .callCheck(hmrcAuditCheck)
         .withChecks { ad =>
           ad.path should be("/register")
-          ad.postcode.map(_.value) should be(Some("SE39EPX"))
+          ad.postcode.map(_.value) should be(Some("SE39EPx"))
 
           ad.tags should contain("user-type" -> "agent")
           ad.tags should contain("arn" -> "1234567890ABCDE")
