@@ -13,6 +13,8 @@ import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 import scala.util.{ Failure, Success, Try }
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.Config
 
 case class RowString(content: String) extends AnyVal
 case class CellValue(content: String) extends AnyVal
@@ -208,22 +210,26 @@ object FileImport extends FileImportTrait {
   def main(args: Array[String]): Unit = {
     val currentDateTime: String = getCurrentTimeStamp
     logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
-    logger.info("Received arguments " + args.toList.toString)
 
-    args.toList match {
-      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileArchiveLocation :: Nil =>
-        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
-        val files: List[File] = getListOfFiles(inputFileLocation)
-        for (file <- files if isValidFile(file.getCanonicalPath)) {
-          val workbook: Workbook = fileAsWorkbook(file.getCanonicalPath)
-          val lineList: List[RowString] = readRows(workbook)
-          val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
-          val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
-          val user: FileImport.User = getUser(userIdIndicator)
-          user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
-          Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
-        }
-      case _ => logger.error("Incorrect number of arguments supplied. The program exits.")
+    val conf: Config = ConfigFactory.load();
+    val inputFileLocation = conf.getString("location.inputfile.value")
+    val inputFileArchiveLocation = conf.getString("location.inputfile.archive.value")
+    val outputFileLocation = conf.getString("location.outputfile.value")
+    val badFileLocation = conf.getString("location.badfile.value")
+    logger.debug(s"Config values are location.inputfile.value = $inputFileLocation, location.inputfile.archive.value= $inputFileArchiveLocation, location.outputfile.value = $outputFileLocation , location.badfile.value=$badFileLocation")
+    validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
+    val files: List[File] = getListOfFiles(inputFileLocation)
+    logger.info(s"The following ${files.size} files will be processed ")
+    val filesWithIndex = files.zipWithIndex
+    for (file <- filesWithIndex) logger.info(file._2 + " - "+ file._1.getAbsoluteFile.toString)
+    for (file <- files if isValidFile(file.getCanonicalPath)) {
+      val workbook: Workbook = fileAsWorkbook(file.getCanonicalPath)
+      val lineList: List[RowString] = readRows(workbook)
+      val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+      val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+      val user: FileImport.User = getUser(userIdIndicator)
+      user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
+      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
     }
   }
 
@@ -237,8 +243,6 @@ object FileImport extends FileImportTrait {
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(inputFileArchiveLocation, false, true)) System.exit(0)
-    else
-      logger.info("The input file is:" + inputFileArchiveLocation)
   }
 
   def getCurrentTimeStamp: String = {

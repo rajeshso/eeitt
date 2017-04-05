@@ -9,12 +9,14 @@ This application takes a spreadsheet and returns a text file containing the data
         
    3. An output folder to store the files containing the records which could not be parsed.
         
-   4. The jar file which the script requires.
+   4. Configure the above information in delta-automation/conf/application.conf
         
         
-2. The arguments that the script take are in the following format:
+2. Place the files to be processed in the input folder and enter the following:
 
-   ./DeltaAutomation "full/path/to/inputFolder" "full/path/to/outputfolder" "full/path/to/badFolder" "fileName.xlsx"
+   ./delta-automation
 
    The files produced by this will be of the original name with a time stamp appended to them.
+
+   The files would be produced in the output folders
 
