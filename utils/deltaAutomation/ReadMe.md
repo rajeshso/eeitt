@@ -2,8 +2,8 @@ This application takes a spreadsheet and returns a text file containing the data
 
 1. To use this application you need a few things:
 
-   1. An input folder in which to place the .xlsx 
-   Files to be processed.
+   1. An input folder in which to place the .xlsx or .xls
+   files to be processed.
         
    2. An output folder where ether output records will be kept.
         
