@@ -1,11 +1,16 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.services
 
-import java.io.FileOutputStream
+import java.io.{ByteArrayOutputStream, File, FileOutputStream}
+import java.util.Properties
+import javax.activation.{DataHandler, FileDataSource}
+import javax.mail.Session
+import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
 
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64
 import com.google.api.services.gmail.Gmail
-import com.google.api.services.gmail.model.{ Message, ModifyMessageRequest, WatchRequest }
+import com.google.api.services.gmail.model.{Message, MessagePart, ModifyMessageRequest, WatchRequest}
+import com.sun.xml.internal.bind.v2.TODO
 import uk.gov.hmrc.eeitt.deltaAutomation.services.AuthService
 
 import scala.collection.JavaConverters._
@@ -22,21 +27,6 @@ class GmailService {
       .build
   }
 
-  //  def configureWatch = {
-  //    val service = getGMailService
-  //    val userId = "me"
-  //    val request = new WatchRequest
-  //    request.setLabelIds(List("INBOX").asJava)
-  //
-  //    service.users().watch(userId, request).execute()
-  //  }
-  //
-  //  def getHistoryId = {
-  //    val service = getGMailService
-  //    val messages = service.users().execute()
-  //    messages
-  //  }
-
   def isNewFile = {
     val service = getGMailService
     val userId = "me"
@@ -50,6 +40,36 @@ class GmailService {
         getAttachments(id)
       }
     }
+  }
+
+  def createMessage(file: File): MimeMessage = {
+    val props = new Properties()
+    val session = Session.getDefaultInstance(props, null)
+    val email = new MimeMessage(session)
+    val mimeBodyPart = new MimeBodyPart()
+    val multipart = new MimeMultipart()
+    val source = new FileDataSource(file)
+    mimeBodyPart.setDataHandler(new DataHandler(source))
+    mimeBodyPart.setFileName(file.getName)
+    email.setFrom(new InternetAddress("service_eeitt.digital_ddcw@digital.hmrc.gov.uk"))
+    email.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress("service_eeitt.digital_ddcw@digital.hmrc.gov.uk"))
+    email.setSubject("DeltaAutomation Clean Data") //TODO
+    mimeBodyPart.setContent("Please find Attached Clean deltas", "text/plain")
+    multipart.addBodyPart(mimeBodyPart)
+    email.setContent(multipart)
+    email
+  }
+
+  def sendResult = {
+    val service = getGMailService
+    val buffer = new ByteArrayOutputStream()
+    val messagePart = createMessage
+    messagePart.writeTo(buffer)
+    val bytes = buffer.toByteArray
+    val encodedEmail = Base64.encodeBase64URLSafeString(bytes)
+    val message = new Message
+    message.setRaw(encodedEmail)
+    service.users().messages().send("me", message).execute()
   }
 
   def markMessageAsRead(id: String) = {
@@ -93,11 +113,11 @@ class GmailService {
         val attachPart = service.users().messages().attachments().get(userId, getMessageId, attId).execute()
         val base64Url: Base64 = new Base64(true)
         val fileByteArray = base64Url.decode(attachPart.getData)
-        val fileOutFile = new FileOutputStream(fileName) //Home/pi/something/input/filename
+        val fileOutFile = new FileOutputStream("/home/daniel-connelly/" + fileName) //Home/pi/something/input/filename
         fileOutFile.write(fileByteArray)
         fileOutFile.close()
       }
     }
-    markMessageAsRead(id)
+    //    markMessageAsRead(id)
   }
 }
