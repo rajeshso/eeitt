@@ -2,7 +2,7 @@ package uk.gov.hmrc.eeitt.deltaAutomation
 
 import java.io.File
 import java.nio.file.Files._
-import java.nio.file.{ Path, Paths }
+import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
@@ -14,11 +14,13 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 import scala.util.{ Failure, Success, Try }
 
+//TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
 trait FileImport {
   var logger = Logger("FileImport")
 
   type CellsArray = Array[CellValue]
 
+  //TODO Check if this method can be moved to FileImportCLI
   def getListOfFiles(dirName: String): List[File] = {
     val directory = new File(dirName)
     if (directory.exists && directory.isDirectory) {
@@ -28,6 +30,7 @@ trait FileImport {
     }
   }
 
+  //TODO Check if this method can be moved to FileImportCLI
   def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
     val path: Path = Paths.get(fileLocation)
     if (!exists(path) || !isDirectory(path)) {
@@ -66,12 +69,11 @@ trait FileImport {
     }
   }
 
-  def fileAsWorkbook(fileLocation: String): Workbook = {
-    val fileSystem = WorkbookFactory.create(new File(s"$fileLocation"))
-    fileSystem
-
+  def getFileAsWorkbook(fileLocation: String): Workbook = {
+    WorkbookFactory.create(new File(s"$fileLocation"))
   }
 
+  //TODO : Add Unit test
   def readRows(workBook: Workbook): List[RowString] = {
     val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
@@ -98,5 +100,29 @@ trait FileImport {
   def getCurrentTimeStamp: String = {
     val dateFormat = new SimpleDateFormat("EEEdMMMyyyy.HH.mm.ss.SSS")
     dateFormat.format(new Date)
+  }
+
+  //TODO: Add unit test
+  def process(
+    currentDateTime: String,
+    inputFileLocation: String,
+    inputFileArchiveLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String
+  ) = {
+    val files: List[File] = getListOfFiles(inputFileLocation)
+    logger.info(s"The following ${files.size} files will be processed ")
+    val filesWithIndex: List[(File, Int)] = files.zipWithIndex
+    for (file <- filesWithIndex) logger.info((file._2 + 1) + " - " + file._1.getAbsoluteFile.toString)
+    for (file <- files if isValidFile(file.getCanonicalPath)) {
+      logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
+      val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
+      val lineList: List[RowString] = readRows(workbook)
+      val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+      val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+      val user: User = getUser(userIdIndicator)
+      user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
+      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+    }
   }
 }

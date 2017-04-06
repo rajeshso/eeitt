@@ -17,6 +17,7 @@ sealed trait User {
     (RowString(s"""${cellsArray.map(a => a.content).mkString("|")}"""))
   }
 
+  //TODO: Move the write to file functionality outside partition functionality - Single Responsiblity Rule
   def partitionUserAndNonUserRecords(
     rowsList: List[RowString],
     outputFileLocation: String,
@@ -56,6 +57,7 @@ sealed trait User {
     cellsArray(1).content.isEmpty ||
     cellsArray(2).content.isEmpty
 
+  //TODO: Move all the write related functionality outside User abstraction
   protected def write(
     outputFileLocation: String,
     badFileLocation: String,
@@ -68,9 +70,9 @@ sealed trait User {
   }
 
   private def writeRows(file: String, rowStrings: List[RowString], label: String) = {
-    if (rowStrings.size != 0) printToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) })
+    if (rowStrings.size != 0) writeToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) })
   }
-  def printToFile(f: File, label: String)(op: (PrintWriter) => Unit): Unit = {
+  def writeToFile(f: File, label: String)(op: (PrintWriter) => Unit): Unit = {
     val writer: PrintWriter = new PrintWriter(f)
     try {
       op(writer)

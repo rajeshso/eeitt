@@ -112,7 +112,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
     val file = new File(path)
     val fileImport = FileImportCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
-    val myWorkbook: Workbook = fileImport.fileAsWorkbook(file.getAbsolutePath)
+    val myWorkbook: Workbook = fileImport.getFileAsWorkbook(file.getAbsolutePath)
     val workbookAsString = FileImportCLI.readRows(myWorkbook)
     workbookAsString shouldBe a[List[_]]
   }
@@ -122,7 +122,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
     val file = new File(fileName)
     val writer = new PrintWriter(file)
     val oneToTen: List[Int] = List.range(1, 10)
-    BusinessUser.printToFile(file, "TestOutputFile")({ writer => oneToTen.foreach(writer.println) })
+    BusinessUser.writeToFile(file, "TestOutputFile")({ writer => oneToTen.foreach(writer.println) })
     val i = Source.fromFile(fileName).getLines.flatMap { line =>
       line.split(" ").map(_.toInt)
     }.toList
@@ -167,7 +167,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
     val file = new File(path)
     val fileImport = FileImportCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
-    val myWorkbook: Workbook = fileImport.fileAsWorkbook(file.getAbsolutePath)
+    val myWorkbook: Workbook = fileImport.getFileAsWorkbook(file.getAbsolutePath)
     val workbookAsString = FileImportCLI.readRows(myWorkbook)
     workbookAsString shouldBe a[List[_]]
   }
