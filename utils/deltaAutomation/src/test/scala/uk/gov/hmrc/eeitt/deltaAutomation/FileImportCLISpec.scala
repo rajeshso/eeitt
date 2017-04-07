@@ -169,7 +169,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
     fileImport.reInitLogger(Logger("TestFileImport"))
     val myWorkbook: Workbook = fileImport.getFileAsWorkbook(file.getAbsolutePath)
     val workbookAsString = FileImportCLI.readRows(myWorkbook)
-    workbookAsString shouldBe a[List[_]]
+    workbookAsString shouldBe a[List[RowString]]
   }
 
 }

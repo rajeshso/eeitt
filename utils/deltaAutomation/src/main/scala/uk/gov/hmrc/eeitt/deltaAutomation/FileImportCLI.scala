@@ -1,6 +1,6 @@
 package uk.gov.hmrc.eeitt.deltaAutomation
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.Logger
 import uk.gov.hmrc.eeitt.deltaAutomation.services.GMailService
 
@@ -10,7 +10,7 @@ import uk.gov.hmrc.eeitt.deltaAutomation.services.GMailService
  */
 object FileImportCLI extends FileImport with App {
 
-  GMailService.onNotification()
+  //GMailService.onNotification()
   val currentDateTime: String = getCurrentTimeStamp
   logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
   val conf: Config = ConfigFactory.load()
@@ -21,15 +21,14 @@ object FileImportCLI extends FileImport with App {
   logger.debug(s"Config values are location.inputfile.value = $inputFileLocation, location.inputfile.archive.value= $inputFileArchiveLocation, location.outputfile.value = $outputFileLocation , location.badfile.value=$badFileLocation")
   validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
   process(currentDateTime, inputFileLocation, inputFileArchiveLocation, outputFileLocation, badFileLocation)
-  GMailService.sendResult()
-
+  //GMailService.sendResult()
 
   private def validateInput(
-                             inputFileLocation: String,
-                             outputFileLocation: String,
-                             badFileLocation: String,
-                             inputFileArchiveLocation: String
-                           ) = {
+    inputFileLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String,
+    inputFileArchiveLocation: String
+  ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)

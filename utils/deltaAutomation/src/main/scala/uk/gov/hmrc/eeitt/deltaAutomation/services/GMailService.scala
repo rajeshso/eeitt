@@ -42,12 +42,12 @@ object GMailService extends GMailHelper {
 
   def sendResult(): Unit = {
     val logFile = new File("DELTAAUTO_HOME_IS_UNDEFINED/logs/audit.log")
-    val masterFile = new File("Master")
+    //val masterFile = new File("Master")
     val buffer = new ByteArrayOutputStream()
     val logMessage = createDeltaMessage(logFile)
-    val masterMessage = createDeltaMessage(masterFile)
+    //val masterMessage = createDeltaMessage(masterFile)
     logMessage.writeTo(buffer)
-    masterMessage.writeTo(buffer)
+    //masterMessage.writeTo(buffer)
     val bytes = buffer.toByteArray
     val encodedEmail = Base64.encodeBase64URLSafeString(bytes)
     val message = new Message

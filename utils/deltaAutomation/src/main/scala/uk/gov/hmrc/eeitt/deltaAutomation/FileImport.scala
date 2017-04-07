@@ -77,7 +77,7 @@ trait FileImport {
     val info = new EncryptionInfo(fs)
     val d: Decryptor = Decryptor.getInstance(info)
 
-    if (!d.verifyPassword("HMRCDATA")) {
+    if (!d.verifyPassword("")) {
       println("unable to process document incorrect password")
     }
     val wb: XSSFWorkbook = new XSSFWorkbook(d.getDataStream(fs))
