@@ -106,7 +106,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
     new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
   }
 
-  "Convert file to string" should "take an XSSFWorkbook and return a list of strings" in {
+  "Read rows" should "take an XSSFWorkbook and return a list of Rowstring" in {
     val fileName: String = "/ValidFile.xls"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
@@ -114,7 +114,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
     fileImport.reInitLogger(Logger("TestFileImport"))
     val myWorkbook: Workbook = fileImport.getFileAsWorkbook(file.getAbsolutePath)
     val workbookAsString = FileImportCLI.readRows(myWorkbook)
-    workbookAsString shouldBe a[List[_]]
+    workbookAsString shouldBe a[List[RowString]]
   }
 
   "print to file" should "take a java file and create a .txt file" in {

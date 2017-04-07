@@ -8,7 +8,10 @@ import java.util
 import java.util.Date
 
 import com.typesafe.scalalogging.Logger
+import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
+import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
 import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
@@ -59,7 +62,7 @@ trait FileImport {
       logger.error(s"Incorrent File Content in $file - The program exits")
       false
     }*/ else {
-      Try(WorkbookFactory.create(new File(s"$file"))) match {
+      Try(getFileAsWorkbook(file)) match {
         case Success(_) => true
         case Failure(e) => {
           logger.error(s"Incorrent File Content in $file ${e.getMessage} - This file is not processed")
@@ -69,11 +72,18 @@ trait FileImport {
     }
   }
 
-  def getFileAsWorkbook(fileLocation: String): Workbook = {
-    WorkbookFactory.create(new File(s"$fileLocation"))
+  def getFileAsWorkbook(fileLocation: String): XSSFWorkbook = {
+    val fs = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
+    val info = new EncryptionInfo(fs)
+    val d: Decryptor = Decryptor.getInstance(info)
+
+    if (!d.verifyPassword("HMRCDATA")) {
+      println("unable to process document incorrect password")
+    }
+    val wb: XSSFWorkbook = new XSSFWorkbook(d.getDataStream(fs))
+    wb
   }
 
-  //TODO : Add Unit test
   def readRows(workBook: Workbook): List[RowString] = {
     val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
