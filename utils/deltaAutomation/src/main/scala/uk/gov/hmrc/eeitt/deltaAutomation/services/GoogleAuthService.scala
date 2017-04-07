@@ -16,24 +16,24 @@ import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 import scala.util.{ Failure, Success, Try }
 
-class AuthService {
+class GoogleAuthService {
 
-  val APPLICATION_NAME = "Delta Automation"
-  private val DATA_STORE_DIR: File = new File(".credentials")
-  val JSON_FACTORY: JacksonFactory = JacksonFactory.getDefaultInstance
+  protected val APPLICATION_NAME = "Delta Automation"
+  protected val DATA_STORE_DIR: File = new File(".credentials")
+  protected val JSON_FACTORY: JacksonFactory = JacksonFactory.getDefaultInstance
   private val SCOPES = Set(GmailScopes.MAIL_GOOGLE_COM, GmailScopes.GMAIL_MODIFY, GmailScopes.GMAIL_READONLY).asJava
 
-  val HTTP_TRANSPORT: HttpTransport =
+  protected val HTTP_TRANSPORT: HttpTransport =
     Try(GoogleNetHttpTransport.newTrustedTransport()) match {
       case Success(x) => x
       case Failure(f) => throw new IllegalArgumentException("HTTP_TRANSPORT :- FAILED TO INITIALISE")
-    } //.recover{ case ex : Throwable => ex.printStackTrace()}
+    }
 
-  private val DATA_STORE_FACTORY: FileDataStoreFactory =
+  protected val DATA_STORE_FACTORY: FileDataStoreFactory =
     Try(new FileDataStoreFactory(DATA_STORE_DIR)) match {
       case Success(x) => x
       case Failure(f) => throw new IllegalArgumentException("DATA_STORE_FACTORY :- FAILED TO INITIALISE")
-    } //.recover{case ex : Throwable => ex.printStackTrace()}
+    }
 
   def authorise: Credential = {
     val in: InputStreamReader = scala.io.Source.fromFile("src/main/resources/client_secret.json").reader()

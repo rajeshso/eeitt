@@ -1,22 +1,24 @@
 package uk.gov.hmrc.eeitt.deltaAutomation
 
-import java.io.{ File, PrintWriter }
+import java.io.{File, PrintWriter}
 import java.nio.file.Files._
-import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
+import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
-import services.GmailService
+import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
+import services.GMailService
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 case class RowString(content: String) extends AnyVal
+
 case class CellValue(content: String) extends AnyVal
+
 trait FileImportTrait {
   var logger = Logger("FileImport")
   type CellsArray = Array[CellValue]
@@ -81,7 +83,7 @@ trait FileImportTrait {
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
       val cells: util.Iterator[Cell] = row.cellIterator()
-      val listOfCells: IndexedSeq[String] = for { cell <- 0 to maxNumOfCells } yield {
+      val listOfCells: IndexedSeq[String] = for {cell <- 0 to maxNumOfCells} yield {
         Option(row.getCell(cell)).map(_.toString).getOrElse("")
       }
       rowBuffer += RowString(listOfCells.mkString("|"))
@@ -106,12 +108,12 @@ trait FileImportTrait {
     }
 
     def partitionUserAndNonUserRecords(
-      rowsList: List[RowString],
-      outputFileLocation: String,
-      badFileLocation: String,
-      currentDateTime: String,
-      inputFileName: String
-    ): Unit = {
+                                        rowsList: List[RowString],
+                                        outputFileLocation: String,
+                                        badFileLocation: String,
+                                        currentDateTime: String,
+                                        inputFileName: String
+                                      ): Unit = {
       val rowsListExceptHeader: List[RowString] = rowsList.tail
       val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString =>
         rowString.content.split("\\|")).filter(cellArray =>
@@ -167,23 +169,23 @@ trait FileImportTrait {
     override val goodRecordFormatFunction = (cellsArray: CellsArray) => RowString("")
 
     override def partitionUserAndNonUserRecords(
-      fileString: List[RowString],
-      outputFileLocation: String,
-      badFileLocation: String,
-      currentDateTime: String,
-      inputFileName: String
-    ): Unit = {
+                                                 fileString: List[RowString],
+                                                 outputFileLocation: String,
+                                                 badFileLocation: String,
+                                                 currentDateTime: String,
+                                                 inputFileName: String
+                                               ): Unit = {
       logger.info("An unrecognised file type has been encountered please see the bad output folder")
     }
   }
 
   protected def write(
-    outputFileLocation: String,
-    badFileLocation: String,
-    goodRowsList: List[RowString],
-    badRowsList: List[RowString],
-    fileName: String
-  ): Unit = {
+                       outputFileLocation: String,
+                       badFileLocation: String,
+                       goodRowsList: List[RowString],
+                       badRowsList: List[RowString],
+                       fileName: String
+                     ): Unit = {
     writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
     writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
   }
@@ -207,38 +209,36 @@ trait FileImportTrait {
 
 object FileImport extends FileImportTrait {
   def main(args: Array[String]): Unit = {
+    GMailService.onNotification()
+    val currentDateTime: String = getCurrentTimeStamp
+    logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+    logger.info("Received arguments " + args.toList.toString)
 
-    val gmail = new GmailService
-    gmail.sendResult
-    gmail.sendResult
-    //        val currentDateTime: String = getCurrentTimeStamp
-    //        logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
-    //        logger.info("Received arguments " + args.toList.toString)
-    //
-    //        args.toList match {
-    //          case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileArchiveLocation :: Nil =>
-    //            validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
-    //            val files: List[File] = getListOfFiles(inputFileLocation)
-    //            for (file <- files if isValidFile(file.getCanonicalPath)) {
-    //              val workbook: Workbook = fileAsWorkbook(file.getCanonicalPath)
-    //              val lineList: List[RowString] = readRows(workbook)
-    //              val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
-    //              val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
-    //              val user: FileImport.User = getUser(userIdIndicator)
-    //              user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
-    //              Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
-    //            }
-    //
-    //          case _ => logger.error("Incorrect number of arguments supplied. The program exits.")
-    //        }
+    args.toList match {
+      case inputFileLocation :: outputFileLocation :: badFileLocation :: inputFileArchiveLocation :: Nil =>
+        validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
+        val files: List[File] = getListOfFiles(inputFileLocation)
+        for (file <- files if isValidFile(file.getCanonicalPath)) {
+          val workbook: Workbook = fileAsWorkbook(file.getCanonicalPath)
+          val lineList: List[RowString] = readRows(workbook)
+          val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+          val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+          val user: FileImport.User = getUser(userIdIndicator)
+          user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
+          Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+          GMailService.sendResult()
+        }
+
+      case _ => logger.error("Incorrect number of arguments supplied. The program exits.")
+    }
   }
 
   private def validateInput(
-    inputFileLocation: String,
-    outputFileLocation: String,
-    badFileLocation: String,
-    inputFileArchiveLocation: String
-  ) = {
+                             inputFileLocation: String,
+                             outputFileLocation: String,
+                             badFileLocation: String,
+                             inputFileArchiveLocation: String
+                           ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
