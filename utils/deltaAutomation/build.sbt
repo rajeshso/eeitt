@@ -16,6 +16,7 @@ libraryDependencies ++= Seq(
   "com.google.api-client" % "google-api-client-appengine" % "1.22.0",
   "com.google.gdata" % "core" % "1.47.1",
   "com.google.apis" % "google-api-services-gmail" % "v1-rev62-1.22.0",
+  "com.typesafe" % "config" % "1.3.1",
   "com.google.apis" % "google-api-services-oauth2" % "v2-rev124-1.22.0",
   "com.google.apis" % "google-api-services-drive" % "v3-rev59-1.22.0"
   )

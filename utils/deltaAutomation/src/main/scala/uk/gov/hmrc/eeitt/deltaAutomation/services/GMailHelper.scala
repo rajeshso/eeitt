@@ -2,27 +2,27 @@ package uk.gov.hmrc.eeitt.deltaAutomation.services
 
 import java.io.File
 import java.util.Properties
-import javax.activation.{DataHandler, FileDataSource}
+import javax.activation.{ DataHandler, FileDataSource }
 import javax.mail.Session
-import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
+import javax.mail.internet.{ InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart }
 
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.services.gmail.Gmail
-import com.google.api.services.gmail.model.{Message, ModifyMessageRequest}
+import com.google.api.services.gmail.model.{ Message, ModifyMessageRequest }
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 
 trait GMailHelper extends GoogleAuthService {
 
-  protected val gMailService : Gmail = {
+  protected val gMailService: Gmail = {
     val credential: Credential = authorise
     new Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
       .setApplicationName(APPLICATION_NAME)
       .build
   }
 
-  protected def getMessageId(message : Message) : String = {
+  protected def getMessageId(message: Message): String = {
     message.getId
   }
 
@@ -39,15 +39,15 @@ trait GMailHelper extends GoogleAuthService {
     messageList.filter(header => header.getName == "From").head.getValue
   }
 
-  protected def markMessageAsRead(id: String) : Unit = {
+  protected def markMessageAsRead(id: String): Unit = {
     val userId = "me"
     val mods = new ModifyMessageRequest().setRemoveLabelIds(List("UNREAD").asJava)
     val result = gMailService.users.messages().modify(userId, id, mods).execute()
   }
 
-  protected def isValidEmail(id : String): Boolean = {
-    val labels : List[String] = getLabels(id)
-    val sender : String = getSender(id)
+  protected def isValidEmail(id: String): Boolean = {
+    val labels: List[String] = getLabels(id)
+    val sender: String = getSender(id)
     labels.contains("Label_1") && labels.contains("UNREAD") && sender == "<Sharlena.Campbell@hmrc.gsi.gov.uk>"
   }
 
@@ -62,7 +62,7 @@ trait GMailHelper extends GoogleAuthService {
     email
   }
 
-  protected def createBodyWithAttachment(file : File) : MimeMultipart = {
+  protected def createBodyWithAttachment(file: File): MimeMultipart = {
     val mimeBodyPart = new MimeBodyPart()
     val multipart = new MimeMultipart()
     val source = new FileDataSource(file)
