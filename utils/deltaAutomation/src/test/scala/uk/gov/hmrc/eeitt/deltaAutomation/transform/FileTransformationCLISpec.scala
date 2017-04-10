@@ -1,14 +1,16 @@
-package uk.gov.hmrc.eeitt.deltaAutomation
+package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{ File, PrintWriter }
+import java.io.{File, PrintWriter}
 import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
 import org.apache.poi.ss.usermodel.Workbook
 import org.scalatest._
+import uk.gov.hmrc.eeitt.deltaAutomation.FileTransformationCLI
+
 import scala.io.Source
 
-class FileImportCLISpec extends FlatSpec with Matchers {
+class FileTransformationCLISpec extends FlatSpec with Matchers {
 
   "filter business user" should "strip the headers from the file and output only the wanted fields of data into the file as well " in {
     val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
@@ -19,10 +21,8 @@ class FileImportCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|XPGD0000010088|ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-    val parsedBusinessUser = BusinessUser.partitionUserAndNonUserRecords(businessUserData, outputFileLocation, badFileLocation, currentDateTime, outputFileName)
-    val fileContents = Source.fromFile(outputFileLocation + currentDateTime + outputFileName + ".txt").getLines()
-    fileContents.toList should be(List("001|XPGD0000010088|||||||||BN12 4XL|GB"))
-    new File(outputFileLocation + currentDateTime + outputFileName + ".txt").delete()
+    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessUserData, outputFileLocation, badFileLocation, currentDateTime, outputFileName)
+    goodRowsList(0).content should startWith("001|XPGD0000010088|||||||||BN12 4XL|GB")
   }
 
   "filter agent user" should "strip the headers from the file and output only the wanted fields of data into the file" in {
@@ -35,10 +35,8 @@ class FileImportCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("002|ZARN0000627|ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
-    val parsedAgentData = AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    val fileContents = Source.fromFile(outputFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContents.toList should be(List("002|ZARN0000627|||||||||BN12 4XL|GB|XAAP00000000007||||||||||non"))
-    new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
+    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) = AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    goodRowsList(0).content should startWith("002|ZARN0000627|||||||||BN12 4XL|GB|XAAP00000000007||||||||||non")
   }
 
   "filter agent user bad records" should "remove bad agent user records because the second cell is empty" in {
@@ -50,10 +48,8 @@ class FileImportCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("002||ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
-    val parsedAgentData = AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContents.toList(0) should startWith("The length of the cells should be 23 and second & third cells should be filled|")
-    new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
+    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) = AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    badRowsList(0).content should startWith("The length of the cells should be 23 and second & third cells should be filled|")
   }
 
   "filter business user bad records" should "remove the bad business user records because its second cell is empty" in {
@@ -65,11 +61,8 @@ class FileImportCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001||ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-    val parsedBusinessData = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContents.toList(0) should startWith("The length of the cells should be 12 and second & third cells should be filled")
-    new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
-    new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
+    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) =  BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    badRowsList(0).content should startWith("The length of the cells should be 12 and second & third cells should be filled")
   }
 
   "filter business user bad records" should "remove the bad business user records because its third cell continues to be select" in {
@@ -81,10 +74,8 @@ class FileImportCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-    val parsedBusinessData = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    val fileContents = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContents.toList should be(List("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
-    new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
+    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    badRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
   }
 
   "filter business user good and bad records" should "filter the bad business user records because its third cell continues to be select, but the good one should pass" in {
@@ -97,23 +88,20 @@ class FileImportCLISpec extends FlatSpec with Matchers {
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|"),
       RowString("001|XQBD00000000|BINGO|Bingo Duty (BD)|7|Limited Company|Bingo||||BN12 4XL|GB|")
     )
-    val parsedBusinessData = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    val fileContentsBad = Source.fromFile(badFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    val fileContentsGood = Source.fromFile(outputFileLocation + currentDateTime + inputFileName + ".txt").getLines()
-    fileContentsBad.toList should be(List("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB"))
-    fileContentsGood.toList should be(List("001|XQBD00000000|||||||||BN12 4XL|GB"))
-    new File(badFileLocation + currentDateTime + inputFileName + ".txt").delete()
-    new File(outputFileLocation + currentDateTime + inputFileName + ".txt").delete()
+    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) =  BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    badRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
+    goodRowsList(0).content should startWith("001|XQBD00000000|||||||||BN12 4XL|GB")
   }
 
+
   "Read rows" should "take an XSSFWorkbook and return a list of Rowstring" in {
-    val fileName: String = "/ValidFile.xls"
+    val fileName: String = "/validFile.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
-    val fileImport = FileImportCLI
+    val fileImport = FileTransformationCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
-    val myWorkbook: Workbook = fileImport.getFileAsWorkbook(file.getAbsolutePath)
-    val workbookAsString = FileImportCLI.readRows(myWorkbook)
+    val myWorkbook: Workbook = FileTransformationCLI.getFileAsWorkbook(file.getAbsolutePath)
+    val workbookAsString = FileTransformationCLI.readRows(myWorkbook)
     workbookAsString shouldBe a[List[RowString]]
   }
 
@@ -132,14 +120,14 @@ class FileImportCLISpec extends FlatSpec with Matchers {
 
   "A valid file location" should "be verified and returned true" in {
     val path = getClass.getResource("").getPath
-    val fileImport = FileImportCLI
+    val fileImport = FileTransformationCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFileLocation(path, true, false) shouldBe true
   }
 
   "An Invalid file location" should "be verified and returned false" in {
     val inValidpath = "//ABC//DEF//GHI"
-    val fileImport = FileImportCLI
+    val fileImport = FileTransformationCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFileLocation(inValidpath, true, false) shouldBe false
   }
@@ -147,7 +135,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
   "A directory path" should "not be considered a file, be verified and returned false" in {
     val path = getClass.getResource("").getPath
     val file = new File(path)
-    val fileImport = FileImportCLI
+    val fileImport = FileTransformationCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFile(file.getAbsolutePath) shouldBe false
   }
@@ -156,7 +144,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
     val fileName: String = "/InvalidContentNonXLSX.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
-    val fileImport = FileImportCLI
+    val fileImport = FileTransformationCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFile(file.getAbsolutePath) shouldBe false
   }
@@ -165,10 +153,10 @@ class FileImportCLISpec extends FlatSpec with Matchers {
     val fileName: String = "/validFile.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
-    val fileImport = FileImportCLI
+    val fileImport = FileTransformationCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
     val myWorkbook: Workbook = fileImport.getFileAsWorkbook(file.getAbsolutePath)
-    val workbookAsString = FileImportCLI.readRows(myWorkbook)
+    val workbookAsString = FileTransformationCLI.readRows(myWorkbook)
     workbookAsString shouldBe a[List[RowString]]
   }
 
