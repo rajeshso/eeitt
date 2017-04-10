@@ -1,17 +1,15 @@
 package uk.gov.hmrc.eeitt.deltaAutomation
 
 import com.typesafe.scalalogging.Logger
-import uk.gov.hmrc.eeitt.deltaAutomation.services.GMailService
+import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
+import uk.gov.hmrc.eeitt.deltaAutomation.transform.FileTransformation
 
-object FileImportCLI extends FileImport with App {
+object FileTransformationCLI extends FileTransformation with App {
 
   GMailService.onNotification()
   process(currentDateTime, inputFileLocation, inputFileArchiveLocation, outputFileLocation, badFileLocation)
 
   GMailService.sendResult()
-
-
-
 
   def reInitLogger(testLogger: Logger): Unit = {
     logger = testLogger
