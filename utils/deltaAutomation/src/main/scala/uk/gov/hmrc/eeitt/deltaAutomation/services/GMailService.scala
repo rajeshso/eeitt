@@ -5,7 +5,6 @@ import java.io.{ ByteArrayOutputStream, File, FileOutputStream }
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64
 import com.google.api.services.gmail.model._
 import com.typesafe.scalalogging.Logger
-import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
@@ -41,7 +40,6 @@ object GMailService extends GMailHelper {
         val fileOutFile: FileOutputStream = new FileOutputStream(storageLocation.getPath + "/" + fileName) //Home/pi/something/input/filename
         fileOutFile.write(fileByteArray)
         fileOutFile.close()
-        logger.info("File was was created in the Jar file")
       }
     }
     markMessageAsRead(id)
@@ -49,7 +47,7 @@ object GMailService extends GMailHelper {
 
   def sendResult(): Unit = {
     val logFile = new File(getClass.getResource("/Logs").getPath.drop(5) + "/audit.log")
-    //val masterFile = new File("Master")
+    //val masterFile = new File("Master") //For appended master file
     val buffer = new ByteArrayOutputStream()
     val logMessage = createDeltaMessage(logFile)
     //val masterMessage = createDeltaMessage(masterFile)

@@ -1,26 +1,26 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.services
 
-import java.io.{File, InputStreamReader}
+import java.io.{ File, InputStreamReader }
 
 import com.typesafe.scalalogging.Logger
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
-import com.google.api.client.googleapis.auth.oauth2.{GoogleAuthorizationCodeFlow, GoogleClientSecrets, GoogleCredential}
+import com.google.api.client.googleapis.auth.oauth2.{ GoogleAuthorizationCodeFlow, GoogleClientSecrets, GoogleCredential }
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
-import com.google.api.client.util.store.{DataStoreFactory, FileDataStoreFactory}
+import com.google.api.client.util.store.{ DataStoreFactory, FileDataStoreFactory }
 import com.google.api.services.gmail.GmailScopes
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 class GoogleAuthService {
 
-  val config : Config = ConfigFactory.load()
+  val config: Config = ConfigFactory.load()
   protected val APPLICATION_NAME = config.getString("GMail.OAuth.ApplicationName")
   private val runningLocation = getClass.getResource("/auth/credentials")
   protected val DATA_STORE_DIR: File = new File(runningLocation.getPath.drop(5))

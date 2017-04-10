@@ -33,7 +33,7 @@ object FileImportCLI extends FileImport with App {
 
   def reInitLogger(testLogger: Logger): Unit = {
     // Mock Logger
-//    logger = testLogger
+    //    logger = testLogger
   }
 
 }

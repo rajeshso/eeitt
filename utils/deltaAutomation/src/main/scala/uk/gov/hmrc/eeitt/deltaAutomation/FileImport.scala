@@ -2,21 +2,17 @@ package uk.gov.hmrc.eeitt.deltaAutomation
 
 import java.io.File
 import java.nio.file.Files._
-import java.nio.file.{Files, Path, Paths, StandardCopyOption}
+import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
-import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
-import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import uk.gov.hmrc.eeitt.deltaAutomation.FileImportCLI.{getClass, getCurrentTimeStamp, initialiseFiles}
+import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 //TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
 trait FileImport {
@@ -25,22 +21,30 @@ trait FileImport {
   val logger = Logger("FileImport")
 
   val currentDateTime: String = getCurrentTimeStamp
-  val inputFileLocation: String = initialiseFiles(getClass.getResource("/Files/Input").getPath.drop(5))
-  val inputFileArchiveLocation: String = initialiseFiles(getClass.getResource("/Files/Input/Archive").getPath.drop(5))
-  val outputFileLocation: String = initialiseFiles(getClass.getResource("/Files/Output").getPath.drop(5))
-  val badFileLocation: String = initialiseFiles(getClass.getResource("/Files/Bad").getPath.drop(5))
+  val inputFileLocation: String = initialiseFiles(getClass.getResource("/Files/Input").getPath)
+  val inputFileArchiveLocation: String = initialiseFiles(getClass.getResource("/Files/Input/Archive").getPath)
+  val outputFileLocation: String = initialiseFiles(getClass.getResource("/Files/Output").getPath)
+  val badFileLocation: String = initialiseFiles(getClass.getResource("/Files/Bad").getPath)
 
   type CellsArray = Array[CellValue]
 
-  def initialiseFiles(path: String) : String = {
-    val isFileCreated = new File(path).mkdirs()
-    isFileCreated match {
-      case true => path
-      case false => ""//logger.error(s"the path $path was not initialised")
+  def initialiseFiles(path: String): String = {
+    if (path.contains("file:")) {
+      val isFileCreated = new File(path.drop(5)).mkdirs()
+      isFileCreated match {
+        case true => path.drop(5)
+        case false => "" //logger.error(s"the path $path was not initialised")
+        // Add default value ? or shutdown
+      }
+    } else {
+      val isFileCreated = new File(path).mkdirs()
+      isFileCreated match {
+        case true => path
+        case false => "" //logger.error(s"the path $path was not initialised")
         // Add default value ? or shutdown ?
+      }
     }
   }
-
 
   //TODO Check if this method can be moved to FileImportCLI
   def getListOfFiles(dirName: String): List[File] = {
@@ -81,28 +85,21 @@ trait FileImport {
       logger.error(s"Incorrent File Content in $file - The program exits")
       false
     }*/ else {
-      Try(getFileAsWorkbook(file)) match {
+      Try(WorkbookFactory.create(new File(s"$file"))) match {
         case Success(_) => true
         case Failure(e) => {
-          logger.error(s"Incorrect File Content in $file ${e.getMessage} - This file is not processed")
+          logger.error(s"Incorrent File Content in $file ${e.getMessage} - This file is not processed")
           false
         }
       }
     }
   }
 
-  def getFileAsWorkbook(fileLocation: String): XSSFWorkbook = {
-    val fs = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
-    val info = new EncryptionInfo(fs)
-    val d: Decryptor = Decryptor.getInstance(info)
-
-    if (!d.verifyPassword("")) {
-      println("unable to process document incorrect password")
-    }
-    val wb: XSSFWorkbook = new XSSFWorkbook(d.getDataStream(fs))
-    wb
+  def getFileAsWorkbook(fileLocation: String): Workbook = {
+    WorkbookFactory.create(new File(s"$fileLocation"))
   }
 
+  //TODO : Add Unit test
   def readRows(workBook: Workbook): List[RowString] = {
     val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
@@ -150,7 +147,6 @@ trait FileImport {
       val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
       val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
       val user: User = getUser(userIdIndicator)
-      new File(inputFileArchiveLocation)
       user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
       Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
     }
