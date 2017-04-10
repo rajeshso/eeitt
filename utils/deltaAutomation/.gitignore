@@ -11,12 +11,10 @@ project/project/
 !/.travis.yml
 /auth/client_secret.json
 /client_secret.json
-/auth/
 /src/main/resources/auth/client_secret.json
 DELTAAUTO_HOME_IS_UNDEFINED/
 src/main/java/
-src/main/resources/auth/credentials/
 src/main/scala-2.12/
 src/test/java/
 src/test/scala-2.12/
-/src/main/resources/auth/
+/src/main/resources/auth/credentials/StoredCredential
