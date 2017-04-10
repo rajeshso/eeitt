@@ -17,14 +17,13 @@ sealed trait User {
     (RowString(s"""${cellsArray.map(a => a.content).mkString("|")}"""))
   }
 
-  //TODO: Move the write to file functionality outside partition functionality - Single Responsiblity Rule
   def partitionUserAndNonUserRecords(
     rowsList: List[RowString],
     outputFileLocation: String,
     badFileLocation: String,
     currentDateTime: String,
     inputFileName: String
-  ): Unit = {
+  ): (List[RowString], List[RowString]) = {
     val rowsListExceptHeader: List[RowString] = rowsList.tail
     val (goodRows, badRows): (List[CellsArray], List[CellsArray]) = rowsListExceptHeader.map(rowString =>
       rowString.content.split("\\|")).filter(cellArray =>
@@ -46,9 +45,7 @@ sealed trait User {
     val goodRowsList: List[RowString] = goodRows.map(goodRecordFormatFunction)
     val badRowsList: List[RowString] = badRowsWithReason.map(badRecordFormatFunction)
     val fileName: String = currentDateTime + inputFileName + ".txt"
-    write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
-    logger.info("Succesful records parsed:" + goodRowsList.length)
-    logger.info("Unsuccesful records parsed:" + badRowsList.length)
+    (goodRowsList, badRowsList)
   }
 
   def thirdCellHasSelect(cellsArray: CellsArray): Boolean = cellsArray(2).content == "select"
@@ -57,7 +54,6 @@ sealed trait User {
     cellsArray(1).content.isEmpty ||
     cellsArray(2).content.isEmpty
 
-  //TODO: Move all the write related functionality outside User abstraction
   protected def write(
     outputFileLocation: String,
     badFileLocation: String,
@@ -112,7 +108,8 @@ case object UnsupportedUser extends User {
     badFileLocation: String,
     currentDateTime: String,
     inputFileName: String
-  ): Unit = {
+  ): (List[RowString], List[RowString]) = {
     logger.info("An unrecognised file type has been encountered please see the bad output folder")
+    (List[RowString](), List[RowString]())
   }
 }
