@@ -2,25 +2,37 @@ package uk.gov.hmrc.eeitt.deltaAutomation
 
 import java.io.File
 import java.nio.file.Files._
-import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
+import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
 
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
+import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
+import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import uk.gov.hmrc.eeitt.deltaAutomation.FileImportCLI.{getCurrentTimeStamp, isValidFileLocation, logger}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 //TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
 trait FileImport {
   var logger = Logger("FileImport")
 
+  val currentDateTime: String = getCurrentTimeStamp
+  logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+  val conf: Config = ConfigFactory.load()
+  val password = conf.getString("password.value")
+  val inputFileLocation = conf.getString("location.inputfile.value")
+  val inputFileArchiveLocation = conf.getString("location.inputfile.archive.value")
+  val outputFileLocation = conf.getString("location.outputfile.value")
+  val badFileLocation = conf.getString("location.badfile.value")
+  logger.debug(s"Config values are location.inputfile.value = $inputFileLocation, location.inputfile.archive.value= $inputFileArchiveLocation, location.outputfile.value = $outputFileLocation , location.badfile.value=$badFileLocation")
+  validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
   type CellsArray = Array[CellValue]
 
   //TODO Check if this method can be moved to FileImportCLI
@@ -31,6 +43,18 @@ trait FileImport {
     } else {
       List[File]()
     }
+  }
+
+  private def validateInput(
+                             inputFileLocation: String,
+                             outputFileLocation: String,
+                             badFileLocation: String,
+                             inputFileArchiveLocation: String
+                           ) = {
+    if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
+    else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
+    else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
+    else if (!isValidFileLocation(inputFileArchiveLocation, false, true)) System.exit(0)
   }
 
   //TODO Check if this method can be moved to FileImportCLI
@@ -77,7 +101,7 @@ trait FileImport {
     val info = new EncryptionInfo(fs)
     val d: Decryptor = Decryptor.getInstance(info)
 
-    if (!d.verifyPassword("")) {
+    if (!d.verifyPassword(FileImportCLI.password)) {
       println("unable to process document incorrect password")
     }
     val wb: XSSFWorkbook = new XSSFWorkbook(d.getDataStream(fs))

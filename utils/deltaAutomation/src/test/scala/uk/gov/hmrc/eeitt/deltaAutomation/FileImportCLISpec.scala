@@ -107,7 +107,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
   }
 
   "Read rows" should "take an XSSFWorkbook and return a list of Rowstring" in {
-    val fileName: String = "/ValidFile.xls"
+    val fileName: String = "/validFile.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
     val fileImport = FileImportCLI
