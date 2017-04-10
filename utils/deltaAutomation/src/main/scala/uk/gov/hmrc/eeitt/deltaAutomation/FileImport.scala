@@ -2,26 +2,45 @@ package uk.gov.hmrc.eeitt.deltaAutomation
 
 import java.io.File
 import java.nio.file.Files._
-import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
+import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
+import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
+import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import uk.gov.hmrc.eeitt.deltaAutomation.FileImportCLI.{getClass, getCurrentTimeStamp, initialiseFiles}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 //TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
 trait FileImport {
-  var logger = Logger("FileImport")
+
+  System.setProperty("LOG_HOME", getClass.getResource("/Logs").getPath.drop(5))
+  val logger = Logger("FileImport")
+
+  val currentDateTime: String = getCurrentTimeStamp
+  val inputFileLocation: String = initialiseFiles(getClass.getResource("/Files/Input").getPath.drop(5))
+  val inputFileArchiveLocation: String = initialiseFiles(getClass.getResource("/Files/Input/Archive").getPath.drop(5))
+  val outputFileLocation: String = initialiseFiles(getClass.getResource("/Files/Output").getPath.drop(5))
+  val badFileLocation: String = initialiseFiles(getClass.getResource("/Files/Bad").getPath.drop(5))
 
   type CellsArray = Array[CellValue]
+
+  def initialiseFiles(path: String) : String = {
+    val isFileCreated = new File(path).mkdirs()
+    isFileCreated match {
+      case true => path
+      case false => ""//logger.error(s"the path $path was not initialised")
+        // Add default value ? or shutdown ?
+    }
+  }
+
 
   //TODO Check if this method can be moved to FileImportCLI
   def getListOfFiles(dirName: String): List[File] = {
@@ -65,7 +84,7 @@ trait FileImport {
       Try(getFileAsWorkbook(file)) match {
         case Success(_) => true
         case Failure(e) => {
-          logger.error(s"Incorrent File Content in $file ${e.getMessage} - This file is not processed")
+          logger.error(s"Incorrect File Content in $file ${e.getMessage} - This file is not processed")
           false
         }
       }
@@ -131,6 +150,7 @@ trait FileImport {
       val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
       val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
       val user: User = getUser(userIdIndicator)
+      new File(inputFileArchiveLocation)
       user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
       Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
     }

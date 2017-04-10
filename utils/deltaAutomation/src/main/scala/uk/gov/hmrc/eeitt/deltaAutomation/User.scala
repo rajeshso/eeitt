@@ -46,6 +46,8 @@ sealed trait User {
     val goodRowsList: List[RowString] = goodRows.map(goodRecordFormatFunction)
     val badRowsList: List[RowString] = badRowsWithReason.map(badRecordFormatFunction)
     val fileName: String = currentDateTime + inputFileName + ".txt"
+    new File(outputFileLocation)
+    new File(badFileLocation)
     write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, fileName)
     logger.info("Succesful records parsed:" + goodRowsList.length)
     logger.info("Unsuccesful records parsed:" + badRowsList.length)

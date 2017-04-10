@@ -1,5 +1,7 @@
 package uk.gov.hmrc.eeitt.deltaAutomation
 
+import java.io.File
+
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.Logger
 import uk.gov.hmrc.eeitt.deltaAutomation.services.GMailService
@@ -10,18 +12,12 @@ import uk.gov.hmrc.eeitt.deltaAutomation.services.GMailService
  */
 object FileImportCLI extends FileImport with App {
 
-  //GMailService.onNotification()
-  val currentDateTime: String = getCurrentTimeStamp
+  GMailService.onNotification()
   logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
-  val conf: Config = ConfigFactory.load()
-  val inputFileLocation = conf.getString("location.inputfile.value")
-  val inputFileArchiveLocation = conf.getString("location.inputfile.archive.value")
-  val outputFileLocation = conf.getString("location.outputfile.value")
-  val badFileLocation = conf.getString("location.badfile.value")
   logger.debug(s"Config values are location.inputfile.value = $inputFileLocation, location.inputfile.archive.value= $inputFileArchiveLocation, location.outputfile.value = $outputFileLocation , location.badfile.value=$badFileLocation")
   validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
   process(currentDateTime, inputFileLocation, inputFileArchiveLocation, outputFileLocation, badFileLocation)
-  //GMailService.sendResult()
+  GMailService.sendResult()
 
   private def validateInput(
     inputFileLocation: String,
@@ -37,7 +33,7 @@ object FileImportCLI extends FileImport with App {
 
   def reInitLogger(testLogger: Logger): Unit = {
     // Mock Logger
-    logger = testLogger
+//    logger = testLogger
   }
 
 }

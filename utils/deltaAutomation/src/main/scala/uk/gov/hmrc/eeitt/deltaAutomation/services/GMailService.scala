@@ -4,12 +4,15 @@ import java.io.{ ByteArrayOutputStream, File, FileOutputStream }
 
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64
 import com.google.api.services.gmail.model._
+import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 
 object GMailService extends GMailHelper {
 
+  val logger = Logger("GMailService")
   def onNotification(): Unit = {
     val userId: String = "me"
     val messages: ListMessagesResponse = gMailService.users().messages().list(userId).execute()
@@ -32,16 +35,20 @@ object GMailService extends GMailHelper {
         val attachPart: MessagePartBody = gMailService.users().messages().attachments().get(userId, id, attId).execute()
         val base64Url: Base64 = new Base64(true)
         val fileByteArray: Array[Byte] = base64Url.decode(attachPart.getData)
-        val fileOutFile: FileOutputStream = new FileOutputStream("~/Downloads/delta/input/" + fileName) //Home/pi/something/input/filename
+        val testLocation = new File(getClass.getResource("/Files").getPath.drop(5))
+        val storageLocation = new File(getClass.getResource("/Files/Input").getPath.drop(5))
+        storageLocation.mkdirs()
+        val fileOutFile: FileOutputStream = new FileOutputStream(storageLocation.getPath + "/" + fileName) //Home/pi/something/input/filename
         fileOutFile.write(fileByteArray)
         fileOutFile.close()
+        logger.info("File was was created in the Jar file")
       }
     }
     markMessageAsRead(id)
   }
 
   def sendResult(): Unit = {
-    val logFile = new File("DELTAAUTO_HOME_IS_UNDEFINED/logs/audit.log")
+    val logFile = new File(getClass.getResource("/Logs").getPath.drop(5) + "/audit.log")
     //val masterFile = new File("Master")
     val buffer = new ByteArrayOutputStream()
     val logMessage = createDeltaMessage(logFile)
