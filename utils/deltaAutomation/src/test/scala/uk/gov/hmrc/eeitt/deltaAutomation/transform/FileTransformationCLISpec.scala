@@ -1,14 +1,15 @@
-package uk.gov.hmrc.eeitt.deltaAutomation
+package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{ File, PrintWriter }
+import java.io.{File, PrintWriter}
 import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.ss.usermodel.Workbook
 import org.scalatest._
+import uk.gov.hmrc.eeitt.deltaAutomation.FileTransformationCLI
+
 import scala.io.Source
 
-class FileImportCLISpec extends FlatSpec with Matchers {
+class FileTransformationCLISpec extends FlatSpec with Matchers {
 
   "filter business user" should "strip the headers from the file and output only the wanted fields of data into the file as well " in {
     val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
@@ -117,14 +118,14 @@ class FileImportCLISpec extends FlatSpec with Matchers {
 
   "A valid file location" should "be verified and returned true" in {
     val path = getClass.getResource("").getPath
-    val fileImport = FileImportCLI
+    val fileImport = FileTransformationCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFileLocation(path, true, false) shouldBe true
   }
 
   "An Invalid file location" should "be verified and returned false" in {
     val inValidpath = "//ABC//DEF//GHI"
-    val fileImport = FileImportCLI
+    val fileImport = FileTransformationCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFileLocation(inValidpath, true, false) shouldBe false
   }
@@ -132,7 +133,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
   "A directory path" should "not be considered a file, be verified and returned false" in {
     val path = getClass.getResource("").getPath
     val file = new File(path)
-    val fileImport = FileImportCLI
+    val fileImport = FileTransformationCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFile(file.getAbsolutePath) shouldBe false
   }
@@ -141,7 +142,7 @@ class FileImportCLISpec extends FlatSpec with Matchers {
     val fileName: String = "/InvalidContentNonXLSX.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
-    val fileImport = FileImportCLI
+    val fileImport = FileTransformationCLI
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFile(file.getAbsolutePath) shouldBe false
   }

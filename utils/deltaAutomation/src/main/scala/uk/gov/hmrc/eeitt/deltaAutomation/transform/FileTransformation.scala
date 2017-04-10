@@ -1,4 +1,4 @@
-package uk.gov.hmrc.eeitt.deltaAutomation
+package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
 import java.io.{ File, PrintWriter }
 import java.nio.file.Files._
@@ -18,7 +18,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{ Failure, Success, Try }
 
 //TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
-trait FileImport {
+trait FileTransformation {
   var logger = Logger("FileImport")
 
   type CellsArray = Array[CellValue]

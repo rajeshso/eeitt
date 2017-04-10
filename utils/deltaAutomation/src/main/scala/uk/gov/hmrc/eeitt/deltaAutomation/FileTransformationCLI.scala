@@ -2,13 +2,14 @@ package uk.gov.hmrc.eeitt.deltaAutomation
 
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.Logger
-import uk.gov.hmrc.eeitt.deltaAutomation.services.GMailService
+import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
+import uk.gov.hmrc.eeitt.deltaAutomation.transform.FileTransformation
 
 /*
  * Created by rajesh on 06/04/17.
  * FileImport Command Line Interface
  */
-object FileImportCLI extends FileImport with App {
+object FileTransformationCLI extends FileTransformation with App {
 
   //GMailService.onNotification()
   val currentDateTime: String = getCurrentTimeStamp
