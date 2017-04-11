@@ -1,17 +1,19 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{ File, PrintWriter }
+import java.io.{ File, FileWriter, PrintWriter }
 import java.nio.file.Files._
 import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
+
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.Logger
 import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
 import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 import scala.util.{ Failure, Success, Try }
@@ -155,10 +157,23 @@ trait FileTransformation {
   ): Unit = {
     writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
     writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
+    writeMaster(s"$outputFileLocation/Master", goodRowsList, fileName.replaceFirst("\\.[^.]+$", ".txt"))
   }
 
+  private def writeMaster(filePath: String, rowStrings: List[RowString], fileName: String): Unit = {
+    val isAppend = true
+    val regex = " (\\d{2})[.](\\d{2})[.]20(\\d{2})[.]".r.findFirstMatchIn(fileName) match {
+      case Some(x) => x.subgroups.mkString
+      case None => logger.error("")
+    }
+    val divider = regex
+    val file = new FileWriter(filePath, isAppend)
+    file.write(divider + "\n")
+    rowStrings.foreach(x => file.write(x.content + "\n"))
+    file.close()
+  }
   private def writeRows(file: String, rowStrings: List[RowString], label: String) = {
-    if (rowStrings.size != 0) writeToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) })
+    if (rowStrings.nonEmpty) writeToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => printWriter.println(rowString.content)) })
   }
 
   private def writeToFile(f: File, label: String)(op: (PrintWriter) => Unit): Unit = {

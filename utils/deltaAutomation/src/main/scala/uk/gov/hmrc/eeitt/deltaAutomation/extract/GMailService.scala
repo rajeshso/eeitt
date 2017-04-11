@@ -59,7 +59,7 @@ object GMailService extends GMailHelper {
 
   def sendSuccessfulResult(): Unit = {
     val logFile = new File(getPath("/Logs") + "/audit.log")
-    val masterFile = new File(getPath("/Output") + "/Master")
+    val masterFile = new File(getPath("/Files/Output") + "/Master")
     val buffer = new ByteArrayOutputStream()
     val mimeMessage = createDeltaMessage(logFile, masterFile, "success")
     mimeMessage.writeTo(buffer)
