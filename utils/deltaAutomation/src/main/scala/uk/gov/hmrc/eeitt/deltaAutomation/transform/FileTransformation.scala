@@ -1,53 +1,67 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{File, PrintWriter}
+import java.io.{ File, PrintWriter }
 import java.nio.file.Files._
-import java.nio.file.{Files, Path, Paths, StandardCopyOption}
+import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
+import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
+import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 //TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
 trait FileTransformation {
 
-  System.setProperty("LOG_HOME", getClass.getResource("/Logs").getPath.drop(5))
-  val logger = Logger("FileImport")
+  System.setProperty("LOG_HOME", getPath("/Logs"))
+  var logger = Logger("FileImport")
 
   val currentDateTime: String = getCurrentTimeStamp
-  val inputFileLocation: String = initialiseFiles(getClass.getResource("/Files/Input").getPath)
-  val inputFileArchiveLocation: String = initialiseFiles(getClass.getResource("/Files/Input/Archive").getPath)
-  val outputFileLocation: String = initialiseFiles(getClass.getResource("/Files/Output").getPath)
-  val badFileLocation: String = initialiseFiles(getClass.getResource("/Files/Bad").getPath)
-  logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
   val conf: Config = ConfigFactory.load()
-  val password = conf.getString("password.value")
-  logger.debug(s"Config values are location.inputfile.value = $inputFileLocation, location.inputfile.archive.value= $inputFileArchiveLocation, location.outputfile.value = $outputFileLocation , location.badfile.value=$badFileLocation")
+  val inputFileLocation: String = getFileLocation("location.inputfile.value", "/Files/Input")
+  val inputFileArchiveLocation: String = getFileLocation("location.inputfile.archive.value", "/Files/Input/Archive")
+  val outputFileLocation: String = getFileLocation("location.outputfile.value", "/Files/Output")
+  val badFileLocation: String = getFileLocation("location.badfile.value", "/Files/Bad")
+
+  println("Input : " + inputFileLocation)
+  println("Archive : " + inputFileArchiveLocation)
+  println("Output : " + outputFileLocation)
+  println("Bad : " + badFileLocation)
+
+  val password: String = conf.getString("password.value")
+
   type CellsArray = Array[CellValue]
 
-  def initialiseFiles(path: String): String = {
-    if (path.contains("file:")) {
-      val isFileCreated = new File(path.drop(5)).mkdirs()
-      isFileCreated match {
-        case true => path.drop(5)
-        case false => "" //logger.error(s"the path $path was not initialised")
-        // Add default value ? or shutdown
-      }
-    } else {
-      val isFileCreated = new File(path).mkdirs()
-      isFileCreated match {
-        case true => path
-        case false => "" //logger.error(s"the path $path was not initialised")
-        // Add default value ? or shutdown ?
-      }
+  //TODO add unit tests
+  def process(
+    currentDateTime: String,
+    inputFileLocation: String,
+    inputFileArchiveLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String
+  ): Unit = {
+    val files: List[File] = getListOfFiles(inputFileLocation)
+    logger.info(s"The following ${files.size} files will be processed ")
+    val filesWithIndex: List[(File, Int)] = files.zipWithIndex
+    for (file <- filesWithIndex) logger.info((file._2 + 1) + " - " + file._1.getAbsoluteFile.toString)
+    for (file <- files if isValidFile(file.getCanonicalPath)) {
+      logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
+      val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
+      val lineList: List[RowString] = readRows(workbook)
+      val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+      val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+      val user: User = getUser(userIdIndicator)
+      val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
+      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, file.getAbsoluteFile.getName)
+      logger.info("Succesful records parsed:" + goodRowsList.length)
+      logger.info("Unsuccesful records parsed:" + badRowsList.length)
+      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
     }
   }
 
@@ -58,35 +72,6 @@ trait FileTransformation {
       directory.listFiles.filter(_.isFile).toList
     } else {
       List[File]()
-    }
-  }
-
-  protected def validateInput(
-                             inputFileLocation: String,
-                             outputFileLocation: String,
-                             badFileLocation: String,
-                             inputFileArchiveLocation: String
-                           ) = {
-    if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
-    else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
-    else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
-    else if (!isValidFileLocation(inputFileArchiveLocation, false, true)) System.exit(0)
-  }
-
-  //TODO Check if this method can be moved to FileImportCLI
-  def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
-    val path: Path = Paths.get(fileLocation)
-    if (!exists(path) || !isDirectory(path)) {
-      logger.error(s"Invalid file location in $fileLocation ")
-      false
-    } else if (read && !isReadable(path)) {
-      logger.error(s"Unable to read from $fileLocation ")
-      false
-    } else if (write && !isWritable(path)) {
-      logger.error(s"Unable to write to $fileLocation ")
-      false
-    } else {
-      true
     }
   }
 
@@ -152,6 +137,15 @@ trait FileTransformation {
     dateFormat.format(new Date)
   }
 
+  protected def getPath(location: String): String = {
+    val path = getClass.getResource(location).getPath
+    if (path.contains("file:")) {
+      path.drop(5)
+    } else {
+      path
+    }
+  }
+
   protected def write(
     outputFileLocation: String,
     badFileLocation: String,
@@ -166,7 +160,8 @@ trait FileTransformation {
   private def writeRows(file: String, rowStrings: List[RowString], label: String) = {
     if (rowStrings.size != 0) writeToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) })
   }
-  def writeToFile(f: File, label: String)(op: (PrintWriter) => Unit): Unit = {
+
+  private def writeToFile(f: File, label: String)(op: (PrintWriter) => Unit): Unit = {
     val writer: PrintWriter = new PrintWriter(f)
     try {
       op(writer)
@@ -178,30 +173,19 @@ trait FileTransformation {
     }
   }
 
-  //TODO: Add unit test
-  def process(
-    currentDateTime: String,
-    inputFileLocation: String,
-    inputFileArchiveLocation: String,
-    outputFileLocation: String,
-    badFileLocation: String
-  ) = {
-    val files: List[File] = getListOfFiles(inputFileLocation)
-    logger.info(s"The following ${files.size} files will be processed ")
-    val filesWithIndex: List[(File, Int)] = files.zipWithIndex
-    for (file <- filesWithIndex) logger.info((file._2 + 1) + " - " + file._1.getAbsoluteFile.toString)
-    for (file <- files if isValidFile(file.getCanonicalPath)) {
-      logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
-      val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
-      val lineList: List[RowString] = readRows(workbook)
-      val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
-      val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
-      val user: User = getUser(userIdIndicator)
-      val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
-      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, file.getAbsoluteFile.getName)
-      logger.info("Succesful records parsed:" + goodRowsList.length)
-      logger.info("Unsuccesful records parsed:" + badRowsList.length)
-      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+  private def initialiseFiles(path: String): Unit = {
+    new File(path).mkdirs()
+  }
+
+  private def getFileLocation(configValue: String, pathValue: String): String = {
+    if (conf.getString(configValue).equals("DEFAULT")) {
+      val path = getPath(pathValue)
+      initialiseFiles(path)
+      path
+    } else {
+      conf.getString(configValue)
     }
   }
 }
+
+class FailedInitiation extends RuntimeException

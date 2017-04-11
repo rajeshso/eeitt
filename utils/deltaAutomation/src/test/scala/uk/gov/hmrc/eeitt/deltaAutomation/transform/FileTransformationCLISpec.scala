@@ -1,12 +1,12 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{File, PrintWriter}
+import java.io.{ File, PrintWriter }
 import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
 import org.apache.poi.ss.usermodel.Workbook
 import org.scalatest._
-import uk.gov.hmrc.eeitt.deltaAutomation.FileTransformationCLI
+import uk.gov.hmrc.eeitt.deltaAutomation.FileTransformationManual
 
 import scala.io.Source
 
@@ -21,7 +21,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|XPGD0000010088|ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessUserData, outputFileLocation, badFileLocation, currentDateTime, outputFileName)
+    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessUserData, outputFileLocation, badFileLocation, currentDateTime, outputFileName)
     goodRowsList(0).content should startWith("001|XPGD0000010088|||||||||BN12 4XL|GB")
   }
 
@@ -35,7 +35,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("002|ZARN0000627|ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
-    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) = AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     goodRowsList(0).content should startWith("002|ZARN0000627|||||||||BN12 4XL|GB|XAAP00000000007||||||||||non")
   }
 
@@ -48,7 +48,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("002||ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
-    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) = AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     badRowsList(0).content should startWith("The length of the cells should be 23 and second & third cells should be filled|")
   }
 
@@ -61,7 +61,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001||ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) =  BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     badRowsList(0).content should startWith("The length of the cells should be 12 and second & third cells should be filled")
   }
 
@@ -74,7 +74,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     badRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
   }
 
@@ -88,20 +88,19 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|"),
       RowString("001|XQBD00000000|BINGO|Bingo Duty (BD)|7|Limited Company|Bingo||||BN12 4XL|GB|")
     )
-    val (goodRowsList, badRowsList) : (List[RowString], List[RowString]) =  BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
+    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
     badRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
     goodRowsList(0).content should startWith("001|XQBD00000000|||||||||BN12 4XL|GB")
   }
-
 
   "Read rows" should "take an XSSFWorkbook and return a list of Rowstring" in {
     val fileName: String = "/validFile.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
-    val fileImport = FileTransformationCLI
+    val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
-    val myWorkbook: Workbook = FileTransformationCLI.getFileAsWorkbook(file.getAbsolutePath)
-    val workbookAsString = FileTransformationCLI.readRows(myWorkbook)
+    val myWorkbook: Workbook = FileTransformationManual.getFileAsWorkbook(file.getAbsolutePath)
+    val workbookAsString = FileTransformationManual.readRows(myWorkbook)
     workbookAsString shouldBe a[List[RowString]]
   }
 
@@ -118,24 +117,10 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     file.delete()
   }
 
-  "A valid file location" should "be verified and returned true" in {
-    val path = getClass.getResource("").getPath
-    val fileImport = FileTransformationCLI
-    fileImport.reInitLogger(Logger("TestFileImport"))
-    fileImport.isValidFileLocation(path, true, false) shouldBe true
-  }
-
-  "An Invalid file location" should "be verified and returned false" in {
-    val inValidpath = "//ABC//DEF//GHI"
-    val fileImport = FileTransformationCLI
-    fileImport.reInitLogger(Logger("TestFileImport"))
-    fileImport.isValidFileLocation(inValidpath, true, false) shouldBe false
-  }
-
   "A directory path" should "not be considered a file, be verified and returned false" in {
     val path = getClass.getResource("").getPath
     val file = new File(path)
-    val fileImport = FileTransformationCLI
+    val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFile(file.getAbsolutePath) shouldBe false
   }
@@ -144,7 +129,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val fileName: String = "/InvalidContentNonXLSX.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
-    val fileImport = FileTransformationCLI
+    val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFile(file.getAbsolutePath) shouldBe false
   }
@@ -153,10 +138,10 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val fileName: String = "/validFile.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
-    val fileImport = FileTransformationCLI
+    val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
     val myWorkbook: Workbook = fileImport.getFileAsWorkbook(file.getAbsolutePath)
-    val workbookAsString = FileTransformationCLI.readRows(myWorkbook)
+    val workbookAsString = FileTransformationManual.readRows(myWorkbook)
     workbookAsString shouldBe a[List[RowString]]
   }
 

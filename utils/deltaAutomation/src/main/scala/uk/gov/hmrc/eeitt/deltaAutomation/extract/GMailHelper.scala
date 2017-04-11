@@ -49,25 +49,31 @@ trait GMailHelper extends GoogleAuthService {
     labels.contains(config.getString("GMail.Helper.Labels")) && labels.contains("UNREAD") && sender == config.getString("GMail.Helper.Sender")
   }
 
-  protected def createDeltaMessage(file: File): MimeMessage = {
+  protected def createDeltaMessage(logFile: File, masterFile: File, result: String): MimeMessage = {
     val props = new Properties()
     val session = Session.getDefaultInstance(props, null)
     val email = new MimeMessage(session)
     email.setFrom(new InternetAddress(config.getString("GMail.Helper.Email")))
     email.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(config.getString("GMail.Helper.Email")))
     email.setSubject(config.getString("GMail.Content.Subject"))
-    email.setText(config.getString("GMail.Content.Text"))
-    email.setContent(createBodyWithAttachment(file))
+    email.setText(config.getString(s"GMail.Content.$result"))
+    email.setContent(createBodyWithAttachment(logFile, masterFile))
     email
   }
 
-  protected def createBodyWithAttachment(file: File): MimeMultipart = {
-    val mimeBodyPart = new MimeBodyPart()
+  protected def createBodyWithAttachment(firstFile: File, secondFile: File): MimeMultipart = {
+    val firstMimeBodyPart = new MimeBodyPart()
     val multipart = new MimeMultipart()
-    val source = new FileDataSource(file)
-    mimeBodyPart.setDataHandler(new DataHandler(source))
-    mimeBodyPart.setFileName(file.getName)
-    multipart.addBodyPart(mimeBodyPart)
+    val firstSource = new FileDataSource(firstFile)
+    firstMimeBodyPart.setDataHandler(new DataHandler(firstSource))
+    firstMimeBodyPart.setFileName(firstFile.getName)
+    multipart.addBodyPart(firstMimeBodyPart)
+
+    val secondMimeBodyPart = new MimeBodyPart()
+    val secondSource = new FileDataSource(secondFile)
+    secondMimeBodyPart.setDataHandler(new DataHandler(secondSource))
+    secondMimeBodyPart.setFileName(secondFile.getName)
+    multipart.addBodyPart(secondMimeBodyPart)
     multipart
   }
 

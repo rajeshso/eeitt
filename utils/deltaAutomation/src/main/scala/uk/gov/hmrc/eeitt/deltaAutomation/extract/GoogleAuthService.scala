@@ -21,9 +21,9 @@ import scala.util.{ Failure, Success, Try }
 class GoogleAuthService {
 
   val config: Config = ConfigFactory.load()
-  protected val APPLICATION_NAME = config.getString("GMail.OAuth.ApplicationName")
-  private val runningLocation = getClass.getResource("/auth/credentials")
-  protected val DATA_STORE_DIR: File = new File(runningLocation.getPath.drop(5))
+
+  protected val APPLICATION_NAME: String = config.getString("GMail.OAuth.ApplicationName")
+  protected val DATA_STORE_DIR: File = new File(getPath("/auth/credentials"))
   protected val JSON_FACTORY: JacksonFactory = JacksonFactory.getDefaultInstance
   private val SCOPES = Set(GmailScopes.MAIL_GOOGLE_COM, GmailScopes.GMAIL_MODIFY, GmailScopes.GMAIL_READONLY).asJava
 
@@ -48,5 +48,14 @@ class GoogleAuthService {
       .setAccessType("offline")
       .build
     new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user")
+  }
+
+  protected def getPath(location: String): String = {
+    val path = getClass.getResource(location).getPath
+    if (path.contains("file:")) {
+      path.drop(5)
+    } else {
+      path
+    }
   }
 }

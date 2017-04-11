@@ -34,25 +34,35 @@ object GMailService extends GMailHelper {
         val attachPart: MessagePartBody = gMailService.users().messages().attachments().get(userId, id, attId).execute()
         val base64Url: Base64 = new Base64(true)
         val fileByteArray: Array[Byte] = base64Url.decode(attachPart.getData)
-        val testLocation = new File(getClass.getResource("/Files").getPath.drop(5))
-        val storageLocation = new File(getClass.getResource("/Files/Input").getPath.drop(5))
+        val storageLocation = new File(getPath("/Files/Input"))
         storageLocation.mkdirs()
-        val fileOutFile: FileOutputStream = new FileOutputStream(storageLocation.getPath + "/" + fileName) //Home/pi/something/input/filename
+        val fileOutFile: FileOutputStream = new FileOutputStream(storageLocation.getPath + "/" + fileName)
         fileOutFile.write(fileByteArray)
         fileOutFile.close()
       }
     }
-    markMessageAsRead(id)
+    //    markMessageAsRead(id)
   }
 
-  def sendResult(): Unit = {
-    val logFile = new File(getClass.getResource("/Logs").getPath.drop(5) + "/audit.log")
-    //val masterFile = new File("Master") //For appended master file
+  def sendError(): Unit = {
+    val errorFile = new File(getPath("/Logs") + "/error.log")
+    val auditFile = new File(getPath("/Logs") + "/audit.log")
     val buffer = new ByteArrayOutputStream()
-    val logMessage = createDeltaMessage(logFile)
-    //val masterMessage = createDeltaMessage(masterFile)
-    logMessage.writeTo(buffer)
-    //masterMessage.writeTo(buffer)
+    val mimeMessage = createDeltaMessage(errorFile, auditFile, "error")
+    mimeMessage.writeTo(buffer)
+    val bytes = buffer.toByteArray
+    val encodedEmail = Base64.encodeBase64URLSafeString(bytes)
+    val message = new Message
+    message.setRaw(encodedEmail)
+    gMailService.users().messages().send("me", message).execute()
+  }
+
+  def sendSuccessfulResult(): Unit = {
+    val logFile = new File(getPath("/Logs") + "/audit.log")
+    val masterFile = new File(getPath("/Output") + "/Master")
+    val buffer = new ByteArrayOutputStream()
+    val mimeMessage = createDeltaMessage(logFile, masterFile, "success")
+    mimeMessage.writeTo(buffer)
     val bytes = buffer.toByteArray
     val encodedEmail = Base64.encodeBase64URLSafeString(bytes)
     val message = new Message
