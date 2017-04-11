@@ -1,22 +1,21 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{File, PrintWriter}
+import java.io.{ File, PrintWriter }
 import java.nio.file.Files._
-import java.nio.file.{Files, Path, Paths, StandardCopyOption}
+import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
+import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
+import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters.asScalaIterator
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
-//TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
 trait FileTransformation {
   var logger = Logger("FileImport")
   val currentDateTime: String = getCurrentTimeStamp
@@ -27,11 +26,10 @@ trait FileTransformation {
   val inputFileArchiveLocation = conf.getString("location.inputfile.archive.value")
   val outputFileLocation = conf.getString("location.outputfile.value")
   val badFileLocation = conf.getString("location.badfile.value")
-  logger.debug(s"Config values are location.inputfile.value = $inputFileLocation, location.inputfile.archive.value= $inputFileArchiveLocation, location.outputfile.value = $outputFileLocation , location.badfile.value=$badFileLocation")
+  logger.debug(s"location.inputfile.value = $inputFileLocation, location.inputfile.archive.value= $inputFileArchiveLocation, location.outputfile.value = $outputFileLocation , location.badfile.value=$badFileLocation")
   validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
   type CellsArray = Array[CellValue]
 
-  //TODO Check if this method can be moved to FileImportCLI
   def getListOfFiles(dirName: String): List[File] = {
     val directory = new File(dirName)
     if (directory.exists && directory.isDirectory) {
@@ -42,18 +40,17 @@ trait FileTransformation {
   }
 
   private def validateInput(
-                             inputFileLocation: String,
-                             outputFileLocation: String,
-                             badFileLocation: String,
-                             inputFileArchiveLocation: String
-                           ) = {
+    inputFileLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String,
+    inputFileArchiveLocation: String
+  ) = {
     if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
     else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
     else if (!isValidFileLocation(inputFileArchiveLocation, false, true)) System.exit(0)
   }
 
-  //TODO Check if this method can be moved to FileImportCLI
   def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
     val path: Path = Paths.get(fileLocation)
     if (!exists(path) || !isDirectory(path)) {
@@ -107,7 +104,7 @@ trait FileTransformation {
   def readRows(workBook: Workbook): List[RowString] = {
     val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
-    val rows: util.Iterator[Row] = sheet.rowIterator()
+    val rows: Iterator[Row] = asScalaIterator(sheet.rowIterator())
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
       val cells: util.Iterator[Cell] = row.cellIterator()
@@ -137,8 +134,10 @@ trait FileTransformation {
     badFileLocation: String,
     goodRowsList: List[RowString],
     badRowsList: List[RowString],
+    ignoredRowsList: List[RowString],
     fileName: String
   ): Unit = {
+    //writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", ignoredRowsList, "Ignored Rows")
     writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
     writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
   }
@@ -177,10 +176,13 @@ trait FileTransformation {
       val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
       val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
       val user: User = getUser(userIdIndicator)
-      val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
-      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, file.getAbsoluteFile.getName)
+      //val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
+      val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
+      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
+      logger.info("Total number of records parsed:" + (lineList.length - 1))
       logger.info("Succesful records parsed:" + goodRowsList.length)
       logger.info("Unsuccesful records parsed:" + badRowsList.length)
+      logger.info("Ignored records :" + ignoredRowsList.length)
       Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
     }
   }
