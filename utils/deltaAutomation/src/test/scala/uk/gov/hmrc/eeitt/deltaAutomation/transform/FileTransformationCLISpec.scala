@@ -21,11 +21,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|XPGD0000010088|ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-<<<<<<< HEAD
-    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessUserData, outputFileLocation, badFileLocation, currentDateTime, outputFileName)
-=======
     val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessUserData)
->>>>>>> addDeltaExtraction
     goodRowsList(0).content should startWith("001|XPGD0000010088|||||||||BN12 4XL|GB")
   }
 
@@ -38,11 +34,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("002|ZARN0000627|ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
-<<<<<<< HEAD
-    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-=======
     val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = AgentUser.partitionUserNonUserAndIgnoredRecords(agentData)
->>>>>>> addDeltaExtraction
     goodRowsList(0).content should startWith("002|ZARN0000627|||||||||BN12 4XL|GB|XAAP00000000007||||||||||non")
   }
 
@@ -55,11 +47,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("002||ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
-<<<<<<< HEAD
-    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = AgentUser.partitionUserAndNonUserRecords(agentData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-=======
     val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = AgentUser.partitionUserNonUserAndIgnoredRecords(agentData)
->>>>>>> addDeltaExtraction
     badRowsList(0).content should startWith("The length of the cells should be 23 and second & third cells should be filled|")
   }
 
@@ -72,11 +60,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001||ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-<<<<<<< HEAD
-    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-=======
     val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
->>>>>>> addDeltaExtraction
     badRowsList(0).content should startWith("The length of the cells should be 12 and second & third cells should be filled")
   }
 
@@ -89,13 +73,8 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-<<<<<<< HEAD
-    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    badRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
-=======
     val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
     ignoredRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
->>>>>>> addDeltaExtraction
   }
 
   "filter business user good and bad records" should "filter the bad business user records because its third cell continues to be select, but the good one should pass" in {
@@ -108,19 +87,12 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|"),
       RowString("001|XQBD00000000|BINGO|Bingo Duty (BD)|7|Limited Company|Bingo||||BN12 4XL|GB|")
     )
-<<<<<<< HEAD
-    val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = BusinessUser.partitionUserAndNonUserRecords(businessData, outputFileLocation, badFileLocation, currentDateTime, inputFileName)
-    badRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
-=======
    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
     ignoredRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
->>>>>>> addDeltaExtraction
     goodRowsList(0).content should startWith("001|XQBD00000000|||||||||BN12 4XL|GB")
     badRowsList.size shouldBe(0)
   }
 
-<<<<<<< HEAD
-=======
   "filter business user good and ignored records" should "filter the ignored business user records because its third cell continues to be select, but the good one should pass" in {
     val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
     val outputFileLocation: String = "src/test/"
@@ -137,22 +109,15 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     badRowsList.size shouldBe(0)
   }
 
->>>>>>> addDeltaExtraction
   "Read rows" should "take an XSSFWorkbook and return a list of Rowstring" in {
     val fileName: String = "/validFile.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
     val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
-<<<<<<< HEAD
     val myWorkbook: Workbook = FileTransformationManual.getFileAsWorkbook(file.getAbsolutePath)
     val workbookAsString = FileTransformationManual.readRows(myWorkbook)
-    workbookAsString shouldBe a[List[RowString]]
-=======
-    val myWorkbook: Workbook = FileTransformationCLI.getFileAsWorkbook(file.getAbsolutePath)
-    val workbookAsString = FileTransformationCLI.readRows(myWorkbook)
     workbookAsString shouldBe a[List[_]]
->>>>>>> addDeltaExtraction
   }
 
   "print to file" should "take a java file and create a .txt file" in {
@@ -160,12 +125,26 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val file = new File(fileName)
     val writer = new PrintWriter(file)
     val oneToTen: List[Int] = List.range(1, 10)
-    FileTransformationCLI.writeToFile(file, "TestOutputFile")({ writer => oneToTen.foreach(writer.println) })
+    FileTransformationManual.writeToFile(file, "TestOutputFile")({ writer => oneToTen.foreach(writer.println) })
     val i = Source.fromFile(fileName).getLines.flatMap { line =>
       line.split(" ").map(_.toInt)
     }.toList
     oneToTen should equal(i)
     file.delete()
+  }
+
+  "A valid file location" should "be verified and returned true" in {
+    val path = getClass.getResource("").getPath
+    val fileImport = FileTransformationManual
+    fileImport.reInitLogger(Logger("TestFileImport"))
+    fileImport.isValidFile(path) shouldBe true
+  }
+
+  "An Invalid file location" should "be verified and returned false" in {
+    val inValidpath = "//ABC//DEF//GHI"
+    val fileImport = FileTransformationManual
+    fileImport.reInitLogger(Logger("TestFileImport"))
+    fileImport.isValidFile(inValidpath) shouldBe false
   }
 
   "A directory path" should "not be considered a file, be verified and returned false" in {
@@ -192,13 +171,8 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
     val myWorkbook: Workbook = fileImport.getFileAsWorkbook(file.getAbsolutePath)
-<<<<<<< HEAD
     val workbookAsString = FileTransformationManual.readRows(myWorkbook)
-    workbookAsString shouldBe a[List[RowString]]
-=======
-    val workbookAsString = FileTransformationCLI.readRows(myWorkbook)
     workbookAsString shouldBe a[List[_]]
->>>>>>> addDeltaExtraction
   }
 
 }
