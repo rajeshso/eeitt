@@ -127,7 +127,7 @@ trait FileTransformation extends Locations {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - This file is not processed")
       false
-    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this fragment can throw a null and is dangerous
+    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this fragment can throw a null
       logger.error(s"Incorrent File Content in $file - The program exits")
       false
     }*/ else {
