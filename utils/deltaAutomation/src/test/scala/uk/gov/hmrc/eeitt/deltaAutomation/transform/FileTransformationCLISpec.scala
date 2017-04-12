@@ -1,12 +1,14 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{File, PrintWriter}
+import java.io.{ File, PrintWriter }
+import java.nio.file.Files.{ exists, isDirectory, isReadable, isWritable }
+import java.nio.file.{ Path, Paths }
 import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
 import org.apache.poi.ss.usermodel.Workbook
 import org.scalatest._
-import uk.gov.hmrc.eeitt.deltaAutomation.FileTransformationCLI
+import uk.gov.hmrc.eeitt.deltaAutomation.FileTransformationManual
 
 import scala.io.Source
 
@@ -63,10 +65,10 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|"),
       RowString("001|XQBD00000000|BINGO|Bingo Duty (BD)|7|Limited Company|Bingo||||BN12 4XL|GB|")
     )
-   val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
+    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
     ignoredRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
     goodRowsList(0).content should startWith("001|XQBD00000000|||||||||BN12 4XL|GB")
-    badRowsList.size shouldBe(0)
+    badRowsList.size shouldBe (0)
   }
 
   "filter business user good and ignored records" should "filter the ignored business user records because its third cell continues to be select, but the good one should pass" in {
@@ -78,17 +80,17 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
     ignoredRowsList(0).content should startWith("The third cell is unselected|001||select|select|select|select||||||select")
     goodRowsList(0).content should startWith("001|XQAL00000100727|||||||||IP6 8EL|GB")
-    badRowsList.size shouldBe(0)
+    badRowsList.size shouldBe (0)
   }
 
   "Read rows" should "take an XSSFWorkbook and return a list of Rowstring" in {
     val fileName: String = "/validFile.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
-    val fileImport = FileTransformationCLI
+    val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
-    val myWorkbook: Workbook = FileTransformationCLI.getFileAsWorkbook(file.getAbsolutePath)
-    val workbookAsString = FileTransformationCLI.readRows(myWorkbook)
+    val myWorkbook: Workbook = FileTransformationManual.getFileAsWorkbook(file.getAbsolutePath)
+    val workbookAsString = FileTransformationManual.readRows(myWorkbook)
     workbookAsString shouldBe a[List[_]]
   }
 
@@ -97,7 +99,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val file = new File(fileName)
     val writer = new PrintWriter(file)
     val oneToTen: List[Int] = List.range(1, 10)
-    FileTransformationCLI.writeToFile(file, "TestOutputFile")({ writer => oneToTen.foreach(writer.println) })
+    FileTransformationManual.writeToFile(file, "TestOutputFile")({ writer => oneToTen.foreach(writer.println) })
     val i = Source.fromFile(fileName).getLines.flatMap { line =>
       line.split(" ").map(_.toInt)
     }.toList
@@ -107,22 +109,22 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
 
   "A valid file location" should "be verified and returned true" in {
     val path = getClass.getResource("").getPath
-    val fileImport = FileTransformationCLI
+    val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
-    fileImport.isValidFileLocation(path, true, false) shouldBe true
+    isValidFileLocation(path, true, false) shouldBe true
   }
 
   "An Invalid file location" should "be verified and returned false" in {
     val inValidpath = "//ABC//DEF//GHI"
-    val fileImport = FileTransformationCLI
+    val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
-    fileImport.isValidFileLocation(inValidpath, true, false) shouldBe false
+    isValidFileLocation(inValidpath, true, false) shouldBe false
   }
 
   "A directory path" should "not be considered a file, be verified and returned false" in {
     val path = getClass.getResource("").getPath
     val file = new File(path)
-    val fileImport = FileTransformationCLI
+    val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFile(file.getAbsolutePath) shouldBe false
   }
@@ -131,7 +133,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val fileName: String = "/InvalidContentNonXLSX.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
-    val fileImport = FileTransformationCLI
+    val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
     fileImport.isValidFile(file.getAbsolutePath) shouldBe false
   }
@@ -140,12 +142,24 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val fileName: String = "/validFile.xlsx"
     val path = getClass.getResource(fileName).getPath
     val file = new File(path)
-    val fileImport = FileTransformationCLI
+    val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
     val myWorkbook: Workbook = fileImport.getFileAsWorkbook(file.getAbsolutePath)
-    val workbookAsString = FileTransformationCLI.readRows(myWorkbook)
+    val workbookAsString = FileTransformationManual.readRows(myWorkbook)
     workbookAsString shouldBe a[List[_]]
   }
 
+  def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
+    val path: Path = Paths.get(fileLocation)
+    if (!exists(path) || !isDirectory(path)) {
+      false
+    } else if (read && !isReadable(path)) {
+      false
+    } else if (write && !isWritable(path)) {
+      false
+    } else {
+      true
+    }
+  }
 }
 
