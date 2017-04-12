@@ -33,4 +33,5 @@ test-result
 tmp
 .idea_modules
 bin
-/utils/deltaAutomation/src/main/resources/client_secret.json
+/utils/deltaAutomation/src/main/resources/auth/client_secret.json
+/utils/deltaAutomation/src/main/resources/auth/credentials/StoredCredential

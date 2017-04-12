@@ -1,23 +1,36 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
+<<<<<<< HEAD
 import java.io.{File, FileWriter, PrintWriter}
+=======
+import java.io.{ File, PrintWriter }
+>>>>>>> addDeltaExtraction
 import java.nio.file.Files._
-import java.nio.file.{Files, Path, Paths, StandardCopyOption}
+import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
+<<<<<<< HEAD
 
+=======
+import com.typesafe.config.{ Config, ConfigFactory }
+>>>>>>> addDeltaExtraction
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
+import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
+import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+<<<<<<< HEAD
 import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 
 import scala.collection.JavaConversions._
+=======
+import scala.collection.JavaConverters.asScalaIterator
+>>>>>>> addDeltaExtraction
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
+<<<<<<< HEAD
 //TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
 trait FileTransformation extends Locations {
   var logger = Logger("FileImport")
@@ -87,6 +100,53 @@ trait FileTransformation extends Locations {
       val fileList = file.listFiles.filter(thing => thing.isFile).toList
       fileList.exists(f => f.getName == fileName)
     } else {
+=======
+trait FileTransformation {
+  var logger = Logger("FileImport")
+  val currentDateTime: String = getCurrentTimeStamp
+  logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+  val conf: Config = ConfigFactory.load()
+  val password = conf.getString("password.value")
+  val inputFileLocation = conf.getString("location.inputfile.value")
+  val inputFileArchiveLocation = conf.getString("location.inputfile.archive.value")
+  val outputFileLocation = conf.getString("location.outputfile.value")
+  val badFileLocation = conf.getString("location.badfile.value")
+  logger.debug(s"location.inputfile.value = $inputFileLocation, location.inputfile.archive.value= $inputFileArchiveLocation, location.outputfile.value = $outputFileLocation , location.badfile.value=$badFileLocation")
+  validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
+  type CellsArray = Array[CellValue]
+
+  def getListOfFiles(dirName: String): List[File] = {
+    val directory = new File(dirName)
+    if (directory.exists && directory.isDirectory) {
+      directory.listFiles.filter(_.isFile).toList
+    } else {
+      List[File]()
+    }
+  }
+
+  private def validateInput(
+    inputFileLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String,
+    inputFileArchiveLocation: String
+  ) = {
+    if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
+    else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
+    else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
+    else if (!isValidFileLocation(inputFileArchiveLocation, false, true)) System.exit(0)
+  }
+
+  def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
+    val path: Path = Paths.get(fileLocation)
+    if (!exists(path) || !isDirectory(path)) {
+      logger.error(s"Invalid file location in $fileLocation ")
+      false
+    } else if (read && !isReadable(path)) {
+      logger.error(s"Unable to read from $fileLocation ")
+      false
+    } else if (write && !isWritable(path)) {
+      logger.error(s"Unable to write to $fileLocation ")
+>>>>>>> addDeltaExtraction
       false
     }
   }
@@ -136,7 +196,7 @@ trait FileTransformation extends Locations {
   def readRows(workBook: Workbook): List[RowString] = {
     val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
-    val rows: util.Iterator[Row] = sheet.rowIterator()
+    val rows: Iterator[Row] = asScalaIterator(sheet.rowIterator())
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
       val cells: util.Iterator[Cell] = row.cellIterator()
@@ -166,8 +226,10 @@ trait FileTransformation extends Locations {
     badFileLocation: String,
     goodRowsList: List[RowString],
     badRowsList: List[RowString],
+    ignoredRowsList: List[RowString],
     fileName: String
   ): Unit = {
+    //writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", ignoredRowsList, "Ignored Rows")
     writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
     writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
     writeMaster(s"$outputFileLocation/Master", goodRowsList, fileName.replaceFirst("\\.[^.]+$", ".txt"))
@@ -202,4 +264,30 @@ trait FileTransformation extends Locations {
       writer.close()
     }
   }
+<<<<<<< HEAD
+=======
+
+  //TODO: Add unit test
+  def process(): Unit = {
+    val files: List[File] = getListOfFiles(inputFileLocation)
+    logger.info(s"The following ${files.size} files will be processed ")
+    val filesWithIndex: List[(File, Int)] = files.zipWithIndex
+    for (file <- filesWithIndex) logger.info((file._2 + 1) + " - " + file._1.getAbsoluteFile.toString)
+    for (file <- files if isValidFile(file.getCanonicalPath)) {
+      logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
+      val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
+      val lineList: List[RowString] = readRows(workbook)
+      val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+      val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+      val user: User = getUser(userIdIndicator)
+      val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList)
+      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
+      logger.info("Total number of records parsed:" + (lineList.length - 1))
+      logger.info("Succesful records parsed:" + goodRowsList.length)
+      logger.info("Unsuccesful records parsed:" + badRowsList.length)
+      logger.info("Ignored records :" + ignoredRowsList.length)
+      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+    }
+  }
+>>>>>>> addDeltaExtraction
 }
