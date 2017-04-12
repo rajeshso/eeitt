@@ -1,72 +1,120 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{File, PrintWriter}
+import java.io.{ File, FileWriter, PrintWriter }
 import java.nio.file.Files._
-import java.nio.file.{Files, Path, Paths, StandardCopyOption}
+import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
-import com.typesafe.config.{Config, ConfigFactory}
-import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
-import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
-import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import scala.collection.JavaConversions._
-import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
 
-//TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
-trait FileTransformation {
+import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.scalalogging.Logger
+import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
+import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
+import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
+
+import scala.collection.JavaConverters.asScalaIterator
+import scala.collection.mutable.ListBuffer
+import scala.util.{ Failure, Success, Try }
+
+trait FileTransformation extends Locations {
   var logger = Logger("FileImport")
   val currentDateTime: String = getCurrentTimeStamp
-  logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
-  val conf: Config = ConfigFactory.load()
-  val password = conf.getString("password.value")
-  val inputFileLocation = conf.getString("location.inputfile.value")
-  val inputFileArchiveLocation = conf.getString("location.inputfile.archive.value")
-  val outputFileLocation = conf.getString("location.outputfile.value")
-  val badFileLocation = conf.getString("location.badfile.value")
-  logger.debug(s"Config values are location.inputfile.value = $inputFileLocation, location.inputfile.archive.value= $inputFileArchiveLocation, location.outputfile.value = $outputFileLocation , location.badfile.value=$badFileLocation")
-  validateInput(inputFileLocation, outputFileLocation, badFileLocation, inputFileArchiveLocation)
+
+  val password: String = conf.getString("password.value")
+
   type CellsArray = Array[CellValue]
 
-  //TODO Check if this method can be moved to FileImportCLI
+  def process(
+    currentDateTime: String,
+    inputFileLocation: String,
+    inputFileArchiveLocation: String,
+    outputFileLocation: String,
+    badFileLocation: String,
+    implementation: List[File] => Unit
+  ): Unit = {
+    val files: List[File] = getListOfFiles(inputFileLocation)
+    logger.info(s"The following ${files.size} files will be processed ")
+    implementation(files)
+  }
+
+  def manualImplementation(files: List[File]): Unit = {
+    val filesWithIndex: List[(File, Int)] = files.zipWithIndex
+    filesWithIndex.foreach(x => logger.info((x._2 + 1) + " - " + x._1.getAbsoluteFile.toString))
+    for { file <- files if isValidFile(file.getCanonicalPath) } yield {
+      logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
+      val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
+      val lineList: List[RowString] = readRows(workbook)
+      val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+      val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+      val user: User = getUser(userIdIndicator)
+      val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList)
+      badRowsList match {
+        case Nil =>
+          write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
+          logger.debug(s"The file ${file.getAbsoluteFile.toString} is successfully parsed and written to the file")
+        case _ =>
+          write(outputFileLocation, badFileLocation, List.empty[RowString], badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
+          logger.info(s"The file ${file.getAbsoluteFile.toString} has incorrect rows. The file is rejected.")
+      }
+      logger.info("Total number of records :" + (lineList.length - 1))
+      logger.info("Successful records :" + goodRowsList.length)
+      logger.info("Unsuccessful records :" + badRowsList.length)
+      logger.info("Ignored records :" + ignoredRowsList.length)
+      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+    }
+  }
+
+  def automatedImplementation(files: List[File]): Unit = {
+    val filesWithIndex: List[(File, Int)] = files.zipWithIndex
+    filesWithIndex.foreach(x => logger.info((x._2 + 1) + " - " + x._1.getAbsoluteFile.toString))
+    for { file <- files if isValidFile(file.getCanonicalPath) } yield {
+      logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
+      val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
+      val lineList: List[RowString] = readRows(workbook)
+      val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+      val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+      val user: User = getUser(userIdIndicator)
+      val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList)
+      badRowsList match {
+        case Nil =>
+          write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
+          logger.debug(s"The file ${file.getAbsoluteFile.toString} is successfully parsed and written to the file")
+        case _ =>
+          write(outputFileLocation, badFileLocation, List.empty[RowString], badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
+          logger.info(s"The file ${file.getAbsoluteFile.toString} has incorrect rows. The file is rejected.")
+      }
+      logger.info("Total number of records :" + (lineList.length - 1))
+      logger.info("Successful records :" + goodRowsList.length)
+      logger.info("Unsuccessful records :" + badRowsList.length)
+      logger.info("Ignored records :" + ignoredRowsList.length)
+      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+      if (isSuccessfulRun(file.getName)) {
+        val result = GMailService.sendSuccessfulResult(user)
+      } else {
+        val result = GMailService.sendError()
+      }
+    }
+  }
+
+  def isSuccessfulRun(fileName: String): Boolean = {
+    val file = new File("/Files/Output")
+    if (file.exists && file.isDirectory) {
+      val fileList = file.listFiles.filter(thing => thing.isFile).toList
+      fileList.exists(f => f.getName == fileName)
+    } else {
+      false
+    }
+  }
+
   def getListOfFiles(dirName: String): List[File] = {
     val directory = new File(dirName)
     if (directory.exists && directory.isDirectory) {
       directory.listFiles.filter(_.isFile).toList
     } else {
       List[File]()
-    }
-  }
-
-  private def validateInput(
-                             inputFileLocation: String,
-                             outputFileLocation: String,
-                             badFileLocation: String,
-                             inputFileArchiveLocation: String
-                           ) = {
-    if (!isValidFileLocation(inputFileLocation, true, false)) System.exit(0)
-    else if (!isValidFileLocation(outputFileLocation, false, true)) System.exit(0)
-    else if (!isValidFileLocation(badFileLocation, false, true)) System.exit(0)
-    else if (!isValidFileLocation(inputFileArchiveLocation, false, true)) System.exit(0)
-  }
-
-  //TODO Check if this method can be moved to FileImportCLI
-  def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
-    val path: Path = Paths.get(fileLocation)
-    if (!exists(path) || !isDirectory(path)) {
-      logger.error(s"Invalid file location in $fileLocation ")
-      false
-    } else if (read && !isReadable(path)) {
-      logger.error(s"Unable to read from $fileLocation ")
-      false
-    } else if (write && !isWritable(path)) {
-      logger.error(s"Unable to write to $fileLocation ")
-      false
-    } else {
-      true
     }
   }
 
@@ -78,16 +126,15 @@ trait FileTransformation {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - This file is not processed")
       false
-    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this fragment can throw a null and is dangerous
+    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this fragment can throw a null
       logger.error(s"Incorrent File Content in $file - The program exits")
       false
     }*/ else {
       Try(getFileAsWorkbook(file)) match {
         case Success(_) => true
-        case Failure(e) => {
+        case Failure(e) =>
           logger.error(s"Incorrent File Content in $file ${e.getMessage} - This file is not processed")
           false
-        }
       }
     }
   }
@@ -107,7 +154,7 @@ trait FileTransformation {
   def readRows(workBook: Workbook): List[RowString] = {
     val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
-    val rows: util.Iterator[Row] = sheet.rowIterator()
+    val rows: Iterator[Row] = asScalaIterator(sheet.rowIterator())
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
       val cells: util.Iterator[Cell] = row.cellIterator()
@@ -137,14 +184,31 @@ trait FileTransformation {
     badFileLocation: String,
     goodRowsList: List[RowString],
     badRowsList: List[RowString],
+    ignoredRowsList: List[RowString],
     fileName: String
   ): Unit = {
+    writeRows(s"$badFileLocation/Ignored${fileName.replaceFirst("\\.[^.]+$", ".txt")}", ignoredRowsList, "Ignored Rows")
     writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
     writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
+    writeMaster(s"$outputFileLocation/Master", goodRowsList, fileName.replaceFirst("\\.[^.]+$", ".txt"))
+  }
+
+  private def writeMaster(filePath: String, rowStrings: List[RowString], fileName: String): Unit = {
+    val isAppend = true
+    val regex = "\\s([A-za-z]+)\\s.*(\\d{2})[.](\\d{2})[.]20(\\d{2})[.]".r.unanchored
+    val divider = fileName match {
+      case regex(affinityGroup, one, two, three) => (affinityGroup, one + two + three)
+      case _ => throw new IllegalArgumentException
+    }
+
+    val file = new FileWriter(filePath + divider._1, isAppend)
+    file.write(divider._2 + "\n")
+    rowStrings.foreach(x => file.write(x.content + "\n"))
+    file.close()
   }
 
   private def writeRows(file: String, rowStrings: List[RowString], label: String) = {
-    if (rowStrings.size != 0) writeToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) })
+    if (rowStrings.nonEmpty) writeToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => printWriter.println(rowString.content)) })
   }
   def writeToFile(f: File, label: String)(op: (PrintWriter) => Unit): Unit = {
     val writer: PrintWriter = new PrintWriter(f)
@@ -155,33 +219,6 @@ trait FileTransformation {
       case e: Throwable => logger.error(e.getMessage)
     } finally {
       writer.close()
-    }
-  }
-
-  //TODO: Add unit test
-  def process(
-    currentDateTime: String,
-    inputFileLocation: String,
-    inputFileArchiveLocation: String,
-    outputFileLocation: String,
-    badFileLocation: String
-  ) = {
-    val files: List[File] = getListOfFiles(inputFileLocation)
-    logger.info(s"The following ${files.size} files will be processed ")
-    val filesWithIndex: List[(File, Int)] = files.zipWithIndex
-    for (file <- filesWithIndex) logger.info((file._2 + 1) + " - " + file._1.getAbsoluteFile.toString)
-    for (file <- files if isValidFile(file.getCanonicalPath)) {
-      logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
-      val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
-      val lineList: List[RowString] = readRows(workbook)
-      val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
-      val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
-      val user: User = getUser(userIdIndicator)
-      val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
-      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, file.getAbsoluteFile.getName)
-      logger.info("Succesful records parsed:" + goodRowsList.length)
-      logger.info("Unsuccesful records parsed:" + badRowsList.length)
-      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
     }
   }
 }
