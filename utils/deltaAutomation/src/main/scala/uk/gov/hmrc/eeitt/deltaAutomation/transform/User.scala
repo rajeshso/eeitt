@@ -63,17 +63,6 @@ sealed trait User {
     cellsArray(1).content.isEmpty ||
     cellsArray(2).content.isEmpty
 
-  protected def write(
-    outputFileLocation: String,
-    badFileLocation: String,
-    goodRowsList: List[RowString],
-    badRowsList: List[RowString],
-    fileName: String
-  ): Unit = {
-    writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
-    writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
-  }
-
   private def writeRows(file: String, rowStrings: List[RowString], label: String) = {
     if (rowStrings.size != 0) writeToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) })
   }
