@@ -125,7 +125,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val file = new File(fileName)
     val writer = new PrintWriter(file)
     val oneToTen: List[Int] = List.range(1, 10)
-    BusinessUser.writeToFile(file, "TestOutputFile")({ writer => oneToTen.foreach(writer.println) })
+    FileTransformationCLI.writeToFile(file, "TestOutputFile")({ writer => oneToTen.foreach(writer.println) })
     val i = Source.fromFile(fileName).getLines.flatMap { line =>
       line.split(" ").map(_.toInt)
     }.toList

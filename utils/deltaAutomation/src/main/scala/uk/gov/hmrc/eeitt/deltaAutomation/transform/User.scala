@@ -62,21 +62,6 @@ sealed trait User {
   def mandatoryCellsMissing(cellsArray: CellsArray): Boolean = cellsArray.length < mandatorySizeOfCells ||
     cellsArray(1).content.isEmpty ||
     cellsArray(2).content.isEmpty
-
-  private def writeRows(file: String, rowStrings: List[RowString], label: String) = {
-    if (rowStrings.size != 0) writeToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => (printWriter.println(rowString.content))) })
-  }
-  def writeToFile(f: File, label: String)(op: (PrintWriter) => Unit): Unit = {
-    val writer: PrintWriter = new PrintWriter(f)
-    try {
-      op(writer)
-      logger.info(s"The file with $label is " + f.getAbsoluteFile)
-    } catch {
-      case e: Throwable => logger.error(e.getMessage)
-    } finally {
-      writer.close()
-    }
-  }
 }
 
 case object BusinessUser extends User {
