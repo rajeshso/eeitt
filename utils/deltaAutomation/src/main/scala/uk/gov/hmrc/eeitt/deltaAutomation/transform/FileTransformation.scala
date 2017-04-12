@@ -1,36 +1,27 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{File, FileWriter, PrintWriter}
+import java.io.{ File, FileWriter, PrintWriter }
 import java.nio.file.Files._
-import java.nio.file.{Files, Path, Paths, StandardCopyOption}
+import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
-
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
+import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
+import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 //TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
-trait FileTransformation {
-
-  System.setProperty("LOG_HOME", getPath("/Logs"))
+trait FileTransformation extends Locations {
   var logger = Logger("FileImport")
-
   val currentDateTime: String = getCurrentTimeStamp
-  val conf: Config = ConfigFactory.load()
-  val inputFileLocation: String = getFileLocation("location.inputfile.value", "/Files/Input")
-  val inputFileArchiveLocation: String = getFileLocation("location.inputfile.archive.value", "/Files/Input/Archive")
-  val outputFileLocation: String = getFileLocation("location.outputfile.value", "/Files/Output")
-  val badFileLocation: String = getFileLocation("location.badfile.value", "/Files/Bad")
 
   val password: String = conf.getString("password.value")
 
@@ -82,7 +73,7 @@ trait FileTransformation {
       logger.info("Succesful records parsed:" + goodRowsList.length)
       logger.info("Unsuccesful records parsed:" + badRowsList.length)
       Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
-      if(isSuccessfulRun(file.getName)) {
+      if (isSuccessfulRun(file.getName)) {
         val result = GMailService.sendSuccessfulResult(user)
       } else {
         val result = GMailService.sendError()
@@ -90,9 +81,9 @@ trait FileTransformation {
     }
   }
 
-  def isSuccessfulRun(fileName : String): Boolean = {
+  def isSuccessfulRun(fileName: String): Boolean = {
     val file = new File("/Files/Output")
-    if(file.exists && file.isDirectory){
+    if (file.exists && file.isDirectory) {
       val fileList = file.listFiles.filter(thing => thing.isFile).toList
       fileList.exists(f => f.getName == fileName)
     } else {
@@ -117,7 +108,10 @@ trait FileTransformation {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - This file is not processed")
       false
-    } else {
+    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this fragment can throw a null and is dangerous
+      logger.error(s"Incorrent File Content in $file - The program exits")
+      false
+    }*/ else {
       Try(getFileAsWorkbook(file)) match {
         case Success(_) => true
         case Failure(e) =>
@@ -167,15 +161,6 @@ trait FileTransformation {
     dateFormat.format(new Date)
   }
 
-  protected def getPath(location: String): String = {
-    val path = getClass.getResource(location).getPath
-    if (path.contains("file:")) {
-      path.drop(5)
-    } else {
-      path
-    }
-  }
-
   protected def write(
     outputFileLocation: String,
     badFileLocation: String,
@@ -215,20 +200,6 @@ trait FileTransformation {
       case e: Throwable => logger.error(e.getMessage)
     } finally {
       writer.close()
-    }
-  }
-
-  private def initialiseFiles(path: String): Unit = {
-    new File(path).mkdirs()
-  }
-
-  private def getFileLocation(configValue: String, pathValue: String): String = {
-    if (conf.getString(configValue).equals("DEFAULT")) {
-      val path = getPath(pathValue)
-      initialiseFiles(path)
-      path
-    } else {
-      conf.getString(configValue)
     }
   }
 }

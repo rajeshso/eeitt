@@ -13,12 +13,16 @@ import scala.language.implicitConversions
 object GMailService extends GMailHelper {
 
   val logger = Logger("GMailService")
+
   def onNotification(): Unit = {
+    logger.info("Application Started On Notifcation from Gmail")
     val userId: String = "me"
     val messages: ListMessagesResponse = gMailService.users().messages().list(userId).execute()
+    logger.debug("Gathering All Emails in account")
     messages.getMessages.asScala.foreach { x =>
       val id: String = getMessageId(x)
       if (isValidEmail(id)) {
+        logger.info(s"message From Email matches Ideal credentials with id : $id")
         pullDownAttachments(id)
       }
     }
@@ -29,20 +33,23 @@ object GMailService extends GMailHelper {
     val message: Message = gMailService.users().messages().get(userId, id).execute()
     val parts: List[MessagePart] = message.getPayload.getParts.asScala.toList
     for (part <- parts) {
+      logger.info(s"Gathering Attachments for the message ${message.getId}")
       if (part.getFilename != null && part.getFilename.length > 0) {
         val fileName: String = part.getFilename
         val attId: String = part.getBody.getAttachmentId
         val attachPart: MessagePartBody = gMailService.users().messages().attachments().get(userId, id, attId).execute()
         val base64Url: Base64 = new Base64(true)
+        logger.info(s"Decoding Email Content")
         val fileByteArray: Array[Byte] = base64Url.decode(attachPart.getData)
         val storageLocation = new File(getPath("/Files/Input"))
-        storageLocation.mkdirs()
         val fileOutFile: FileOutputStream = new FileOutputStream(storageLocation.getPath + "/" + fileName)
         fileOutFile.write(fileByteArray)
+        logger.debug("closing FileOutputStream")
         fileOutFile.close()
+        logger.info(s"One Attachment Downloaded $fileName")
       }
     }
-        markMessageAsRead(id)
+    markMessageAsRead(id)
   }
 
   def sendError(): Unit = {
