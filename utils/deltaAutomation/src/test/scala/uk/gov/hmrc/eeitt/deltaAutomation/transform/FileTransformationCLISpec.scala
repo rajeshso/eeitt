@@ -1,6 +1,8 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
 import java.io.{ File, PrintWriter }
+import java.nio.file.Files.{ exists, isDirectory, isReadable, isWritable }
+import java.nio.file.{ Path, Paths }
 import java.util.Calendar
 
 import com.typesafe.scalalogging.Logger
@@ -63,10 +65,10 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|"),
       RowString("001|XQBD00000000|BINGO|Bingo Duty (BD)|7|Limited Company|Bingo||||BN12 4XL|GB|")
     )
-   val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
+    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
     ignoredRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
     goodRowsList(0).content should startWith("001|XQBD00000000|||||||||BN12 4XL|GB")
-    badRowsList.size shouldBe(0)
+    badRowsList.size shouldBe (0)
   }
 
   "filter business user good and ignored records" should "filter the ignored business user records because its third cell continues to be select, but the good one should pass" in {
@@ -78,7 +80,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
     ignoredRowsList(0).content should startWith("The third cell is unselected|001||select|select|select|select||||||select")
     goodRowsList(0).content should startWith("001|XQAL00000100727|||||||||IP6 8EL|GB")
-    badRowsList.size shouldBe(0)
+    badRowsList.size shouldBe (0)
   }
 
   "Read rows" should "take an XSSFWorkbook and return a list of Rowstring" in {
@@ -109,14 +111,14 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     val path = getClass.getResource("").getPath
     val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
-    fileImport.isValidFile(path) shouldBe true
+    isValidFileLocation(path, true, false) shouldBe true
   }
 
   "An Invalid file location" should "be verified and returned false" in {
     val inValidpath = "//ABC//DEF//GHI"
     val fileImport = FileTransformationManual
     fileImport.reInitLogger(Logger("TestFileImport"))
-    fileImport.isValidFile(inValidpath) shouldBe false
+    isValidFileLocation(inValidpath, true, false) shouldBe false
   }
 
   "A directory path" should "not be considered a file, be verified and returned false" in {
@@ -147,5 +149,17 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     workbookAsString shouldBe a[List[_]]
   }
 
+  def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
+    val path: Path = Paths.get(fileLocation)
+    if (!exists(path) || !isDirectory(path)) {
+      false
+    } else if (read && !isReadable(path)) {
+      false
+    } else if (write && !isWritable(path)) {
+      false
+    } else {
+      true
+    }
+  }
 }
 
