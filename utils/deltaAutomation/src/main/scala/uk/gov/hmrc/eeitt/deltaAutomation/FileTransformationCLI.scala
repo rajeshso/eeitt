@@ -7,7 +7,7 @@ import uk.gov.hmrc.eeitt.deltaAutomation.transform.FileTransformation
 object FileTransformationCLI extends FileTransformation with App {
 
   GMailService.onNotification()
-  process(currentDateTime, inputFileLocation, inputFileArchiveLocation, outputFileLocation, badFileLocation)
+  process()
 
   GMailService.sendResult()
 

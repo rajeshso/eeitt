@@ -1,7 +1,5 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{ File, PrintWriter }
-
 import com.typesafe.scalalogging.Logger
 
 /**
@@ -17,13 +15,7 @@ sealed trait User {
     (RowString(s"""${cellsArray.map(a => a.content).mkString("|")}"""))
   }
 
-  def partitionUserNonUserAndIgnoredRecords(
-    rowsList: List[RowString],
-    outputFileLocation: String,
-    badFileLocation: String,
-    currentDateTime: String,
-    inputFileName: String
-  ): (List[RowString], List[RowString], List[RowString]) = {
+  def partitionUserNonUserAndIgnoredRecords(rowsList: List[RowString]): (List[RowString], List[RowString], List[RowString]) = {
     val rowsListExceptHeader: List[RowString] = rowsList.tail
     val (goodRows, badRows): (List[CellsArray], List[CellsArray]) =
       rowsListExceptHeader.map(rowString =>
@@ -39,7 +31,6 @@ sealed trait User {
     val goodRowsList: List[RowString] = goodRows.map(goodRecordFormatFunction)
     val badRowsList: List[RowString] = badRowsWithReason.map(badRecordFormatFunction)
     val ignoredRowsList: List[RowString] = ignoredRowsWithReason.map(badRecordFormatFunction)
-    //val fileName: String = currentDateTime + inputFileName + ".txt"
     (goodRowsList, badRowsList, ignoredRowsList)
   }
 
@@ -85,13 +76,7 @@ case object UnsupportedUser extends User {
   override val mandatorySizeOfCells: Int = 0
   override val goodRecordFormatFunction = (cellsArray: CellsArray) => RowString("")
 
-  override def partitionUserNonUserAndIgnoredRecords(
-    rowsList: List[RowString],
-    outputFileLocation: String,
-    badFileLocation: String,
-    currentDateTime: String,
-    inputFileName: String
-  ): (List[RowString], List[RowString], List[RowString]) = {
+  override def partitionUserNonUserAndIgnoredRecords(rowsList: List[RowString]): (List[RowString], List[RowString], List[RowString]) = {
     logger.info("An unrecognised file type has been encountered please see the bad output folder")
     (List[RowString](), List[RowString](), List[RowString]())
   }

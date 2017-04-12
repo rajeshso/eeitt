@@ -158,13 +158,7 @@ trait FileTransformation {
   }
 
   //TODO: Add unit test
-  def process(
-    currentDateTime: String,
-    inputFileLocation: String,
-    inputFileArchiveLocation: String,
-    outputFileLocation: String,
-    badFileLocation: String
-  ) = {
+  def process(): Unit = {
     val files: List[File] = getListOfFiles(inputFileLocation)
     logger.info(s"The following ${files.size} files will be processed ")
     val filesWithIndex: List[(File, Int)] = files.zipWithIndex
@@ -176,8 +170,7 @@ trait FileTransformation {
       val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
       val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
       val user: User = getUser(userIdIndicator)
-      //val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
-      val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
+      val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList)
       write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
       logger.info("Total number of records parsed:" + (lineList.length - 1))
       logger.info("Succesful records parsed:" + goodRowsList.length)
