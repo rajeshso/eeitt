@@ -13,10 +13,6 @@ import scala.io.Source
 class FileTransformationCLISpec extends FlatSpec with Matchers {
 
   "filter business user" should "strip the headers from the file and output only the wanted fields of data into the file as well " in {
-    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-    val outputFileLocation: String = "src/test/"
-    val badFileLocation: String = "src/test/"
-    val outputFileName: String = "testFile"
     val businessUserData: List[RowString] = List(
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|XPGD0000010088|ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
@@ -26,10 +22,6 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
   }
 
   "filter agent user" should "strip the headers from the file and output only the wanted fields of data into the file" in {
-    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-    val outputFileLocation: String = "src/test/"
-    val badFileLocation: String = "src/test/"
-    val inputFileName: String = "testFile"
     val agentData: List[RowString] = List(
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("002|ZARN0000627|ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
@@ -39,10 +31,6 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
   }
 
   "filter agent user bad records" should "remove bad agent user records because the second cell is empty" in {
-    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-    val outputFileLocation: String = "src/test/"
-    val badFileLocation: String = "src/test/resources/"
-    val inputFileName: String = "testFile"
     val agentData: List[RowString] = List(
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("002||ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
@@ -52,10 +40,6 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
   }
 
   "filter business user bad records" should "remove the bad business user records because its second cell is empty" in {
-    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-    val outputFileLocation: String = "src/test/"
-    val badFileLocation: String = "src/test/resources/"
-    val inputFileName: String = "testFile"
     val businessData: List[RowString] = List(
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001||ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
@@ -65,10 +49,6 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
   }
 
   "filter business user bad records" should "remove the bad business user records because its third cell continues to be select" in {
-    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-    val outputFileLocation: String = "src/test/"
-    val badFileLocation: String = "src/test/resources/"
-    val inputFileName: String = "testFile"
     val businessData: List[RowString] = List(
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
@@ -78,10 +58,6 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
   }
 
   "filter business user good and bad records" should "filter the bad business user records because its third cell continues to be select, but the good one should pass" in {
-    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-    val outputFileLocation: String = "src/test/"
-    val badFileLocation: String = "src/test/resources/"
-    val inputFileName: String = "testFile"
     val businessData: List[RowString] = List(
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|"),
@@ -94,10 +70,6 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
   }
 
   "filter business user good and ignored records" should "filter the ignored business user records because its third cell continues to be select, but the good one should pass" in {
-    val currentDateTime: String = Calendar.getInstance.getTime.toString.replaceAll(" ", "")
-    val outputFileLocation: String = "src/test/"
-    val badFileLocation: String = "src/test/resources/"
-    val inputFileName: String = "testFile"
     val businessData: List[RowString] = List(
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|XQAL00000100727|ZAGL|Aggregate Levy (AGL)|7|Limited Company|NEEDHAM CHALKS (HAM) LIMITED||||IP6 8EL|GB|"),

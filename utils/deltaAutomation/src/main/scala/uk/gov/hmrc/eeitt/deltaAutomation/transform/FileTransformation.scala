@@ -75,7 +75,7 @@ trait FileTransformation {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - This file is not processed")
       false
-    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this fragment can throw a null and is dangerous
+    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this fragment can throw a null
       logger.error(s"Incorrent File Content in $file - The program exits")
       false
     }*/ else {
@@ -137,7 +137,7 @@ trait FileTransformation {
     ignoredRowsList: List[RowString],
     fileName: String
   ): Unit = {
-    //writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", ignoredRowsList, "Ignored Rows")
+    writeRows(s"$badFileLocation/Ignored${fileName.replaceFirst("\\.[^.]+$", ".txt")}", ignoredRowsList, "Ignored Rows")
     writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
     writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
   }
@@ -171,10 +171,17 @@ trait FileTransformation {
       val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
       val user: User = getUser(userIdIndicator)
       val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList)
-      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
-      logger.info("Total number of records parsed:" + (lineList.length - 1))
-      logger.info("Succesful records parsed:" + goodRowsList.length)
-      logger.info("Unsuccesful records parsed:" + badRowsList.length)
+      badRowsList match {
+        case Nil =>
+          write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
+          logger.debug(s"The file ${file.getAbsoluteFile.toString} is successfully parsed and written to the file")
+        case _ =>
+          write(outputFileLocation, badFileLocation, List.empty[RowString], badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
+          logger.info(s"The file ${file.getAbsoluteFile.toString} has incorrect rows. The file is rejected.")
+      }
+      logger.info("Total number of records :" + (lineList.length - 1))
+      logger.info("Successful records :" + goodRowsList.length)
+      logger.info("Unsuccessful records :" + badRowsList.length)
       logger.info("Ignored records :" + ignoredRowsList.length)
       Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
     }
