@@ -1,22 +1,23 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{ File, FileWriter, PrintWriter }
+import java.io.{File, FileWriter, PrintWriter}
 import java.nio.file.Files._
-import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
+import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
 
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
+import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
+import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 //TODO Rename FileImport to FileTransformation and FileImportCLI as FileImportTransformerCLI
 trait FileTransformation {
@@ -31,28 +32,27 @@ trait FileTransformation {
   val outputFileLocation: String = getFileLocation("location.outputfile.value", "/Files/Output")
   val badFileLocation: String = getFileLocation("location.badfile.value", "/Files/Bad")
 
-  println("Input : " + inputFileLocation)
-  println("Archive : " + inputFileArchiveLocation)
-  println("Output : " + outputFileLocation)
-  println("Bad : " + badFileLocation)
-
   val password: String = conf.getString("password.value")
 
   type CellsArray = Array[CellValue]
 
-  //TODO add unit tests
   def process(
     currentDateTime: String,
     inputFileLocation: String,
     inputFileArchiveLocation: String,
     outputFileLocation: String,
-    badFileLocation: String
+    badFileLocation: String,
+    implementation: List[File] => Unit
   ): Unit = {
     val files: List[File] = getListOfFiles(inputFileLocation)
     logger.info(s"The following ${files.size} files will be processed ")
+    implementation(files)
+  }
+
+  def manualImplementation(files: List[File]): Unit = {
     val filesWithIndex: List[(File, Int)] = files.zipWithIndex
-    for (file <- filesWithIndex) logger.info((file._2 + 1) + " - " + file._1.getAbsoluteFile.toString)
-    for (file <- files if isValidFile(file.getCanonicalPath)) {
+    filesWithIndex.foreach(x => logger.info((x._2 + 1) + " - " + x._1.getAbsoluteFile.toString))
+    for { file <- files if isValidFile(file.getCanonicalPath) } yield {
       logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
       val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
       val lineList: List[RowString] = readRows(workbook)
@@ -67,7 +67,39 @@ trait FileTransformation {
     }
   }
 
-  //TODO Check if this method can be moved to FileImportCLI
+  def automatedImplementation(files: List[File]): Unit = {
+    val filesWithIndex: List[(File, Int)] = files.zipWithIndex
+    filesWithIndex.foreach(x => logger.info((x._2 + 1) + " - " + x._1.getAbsoluteFile.toString))
+    for { file <- files if isValidFile(file.getCanonicalPath) } yield {
+      logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
+      val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
+      val lineList: List[RowString] = readRows(workbook)
+      val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
+      val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
+      val user: User = getUser(userIdIndicator)
+      val (goodRowsList, badRowsList): (List[RowString], List[RowString]) = user.partitionUserAndNonUserRecords(lineList, outputFileLocation, badFileLocation, currentDateTime, file.getAbsoluteFile.getName)
+      write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, file.getAbsoluteFile.getName)
+      logger.info("Succesful records parsed:" + goodRowsList.length)
+      logger.info("Unsuccesful records parsed:" + badRowsList.length)
+      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+      if(isSuccessfulRun(file.getName)) {
+        val result = GMailService.sendSuccessfulResult(user)
+      } else {
+        val result = GMailService.sendError()
+      }
+    }
+  }
+
+  def isSuccessfulRun(fileName : String): Boolean = {
+    val file = new File("/Files/Output")
+    if(file.exists && file.isDirectory){
+      val fileList = file.listFiles.filter(thing => thing.isFile).toList
+      fileList.exists(f => f.getName == fileName)
+    } else {
+      false
+    }
+  }
+
   def getListOfFiles(dirName: String): List[File] = {
     val directory = new File(dirName)
     if (directory.exists && directory.isDirectory) {
@@ -85,16 +117,12 @@ trait FileTransformation {
     } else if (!isReadable(path)) {
       logger.error(s"Unable to read from $file - This file is not processed")
       false
-    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this fragment can throw a null and is dangerous
-      logger.error(s"Incorrent File Content in $file - The program exits")
-      false
-    }*/ else {
+    } else {
       Try(getFileAsWorkbook(file)) match {
         case Success(_) => true
-        case Failure(e) => {
+        case Failure(e) =>
           logger.error(s"Incorrent File Content in $file ${e.getMessage} - This file is not processed")
           false
-        }
       }
     }
   }
@@ -162,16 +190,18 @@ trait FileTransformation {
 
   private def writeMaster(filePath: String, rowStrings: List[RowString], fileName: String): Unit = {
     val isAppend = true
-    val regex = " (\\d{2})[.](\\d{2})[.]20(\\d{2})[.]".r.findFirstMatchIn(fileName) match {
-      case Some(x) => x.subgroups.mkString
-      case None => logger.error("")
+    val regex = "\\s([A-za-z]+)\\s.*(\\d{2})[.](\\d{2})[.]20(\\d{2})[.]".r.unanchored
+    val divider = fileName match {
+      case regex(affinityGroup, one, two, three) => (affinityGroup, one + two + three)
+      case _ => throw new IllegalArgumentException
     }
-    val divider = regex
-    val file = new FileWriter(filePath, isAppend)
-    file.write(divider + "\n")
+
+    val file = new FileWriter(filePath + divider._1, isAppend)
+    file.write(divider._2 + "\n")
     rowStrings.foreach(x => file.write(x.content + "\n"))
     file.close()
   }
+
   private def writeRows(file: String, rowStrings: List[RowString], label: String) = {
     if (rowStrings.nonEmpty) writeToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => printWriter.println(rowString.content)) })
   }
@@ -202,5 +232,3 @@ trait FileTransformation {
     }
   }
 }
-
-class FailedInitiation extends RuntimeException

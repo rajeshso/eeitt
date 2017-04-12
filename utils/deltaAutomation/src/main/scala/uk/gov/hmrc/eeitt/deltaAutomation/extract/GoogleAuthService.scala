@@ -30,16 +30,20 @@ class GoogleAuthService {
   protected val HTTP_TRANSPORT: HttpTransport =
     Try(GoogleNetHttpTransport.newTrustedTransport()) match {
       case Success(x) => x
-      case Failure(f) => throw new IllegalArgumentException("HTTP_TRANSPORT :- FAILED TO INITIALISE")
+      case Failure(f) =>
+        GMailService.sendError()
+        throw new IllegalArgumentException("HTTP_TRANSPORT :- FAILED TO INITIALISE")
     }
 
   protected val DATA_STORE_FACTORY: DataStoreFactory =
     Try(new FileDataStoreFactory(DATA_STORE_DIR)) match {
       case Success(x) => x
-      case Failure(f) => throw new IllegalArgumentException(s"DATA_STORE_FACTORY :- FAILED TO INITIALISE ${f.getMessage}")
+      case Failure(f) =>
+        GMailService.sendError()
+        throw new IllegalArgumentException(s"DATA_STORE_FACTORY :- FAILED TO INITIALISE ${f.getMessage}")
     }
 
-  def authorise: Credential = {
+  val authorise: Credential = {
     val client_secret = getClass.getResourceAsStream("/auth/client_secret.json")
     val client_secret_input_stream: InputStreamReader = scala.io.Source.fromInputStream(client_secret).reader()
     val clientSecrets: GoogleClientSecrets = GoogleClientSecrets.load(JSON_FACTORY, client_secret_input_stream)

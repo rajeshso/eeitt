@@ -5,6 +5,7 @@ import java.io.{ ByteArrayOutputStream, File, FileOutputStream }
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64
 import com.google.api.services.gmail.model._
 import com.typesafe.scalalogging.Logger
+import uk.gov.hmrc.eeitt.deltaAutomation.transform.{ AgentUser, BusinessUser, User }
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
@@ -41,7 +42,7 @@ object GMailService extends GMailHelper {
         fileOutFile.close()
       }
     }
-    //    markMessageAsRead(id)
+        markMessageAsRead(id)
   }
 
   def sendError(): Unit = {
@@ -57,9 +58,14 @@ object GMailService extends GMailHelper {
     gMailService.users().messages().send("me", message).execute()
   }
 
-  def sendSuccessfulResult(): Unit = {
+  def sendSuccessfulResult(affinityGroup: User): Message = {
     val logFile = new File(getPath("/Logs") + "/audit.log")
-    val masterFile = new File(getPath("/Files/Output") + "/Master")
+    val masterFile = {
+      affinityGroup match {
+        case AgentUser => new File(getPath("/Files/Output/Master") + "/MasterAgent")
+        case BusinessUser => new File(getPath("/Files/Output/Master") + "/MasterBusiness")
+      }
+    }
     val buffer = new ByteArrayOutputStream()
     val mimeMessage = createDeltaMessage(logFile, masterFile, "success")
     mimeMessage.writeTo(buffer)
@@ -67,6 +73,6 @@ object GMailService extends GMailHelper {
     val encodedEmail = Base64.encodeBase64URLSafeString(bytes)
     val message = new Message
     message.setRaw(encodedEmail)
-    val result = gMailService.users().messages().send("me", message).execute()
+    gMailService.users().messages().send("me", message).execute()
   }
 }
