@@ -193,12 +193,13 @@ trait FileTransformation extends Locations {
     writeMaster(s"$outputFileLocation/Master", goodRowsList, fileName.replaceFirst("\\.[^.]+$", ".txt"))
   }
 
+  //TODO : The Exception has to be handled
   private def writeMaster(filePath: String, rowStrings: List[RowString], fileName: String): Unit = {
     val isAppend = true
     val regex = "\\s([A-za-z]+)\\s.*(\\d{2})[.](\\d{2})[.]20(\\d{2})[.]".r.unanchored
     val divider = fileName match {
       case regex(affinityGroup, one, two, three) => (affinityGroup, one + two + three)
-      case _ => throw new IllegalArgumentException
+      case _ => throw new IllegalArgumentException("The file name is not in the expected format")
     }
 
     val file = new FileWriter(filePath + divider._1, isAppend)
