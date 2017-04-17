@@ -1,6 +1,6 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{ File, FileWriter, PrintWriter }
+import java.io._
 import java.nio.file.Files._
 import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
@@ -9,17 +9,22 @@ import java.util.Date
 
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
+import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
+import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 
-import scala.collection.JavaConverters.asScalaIterator
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.util.{ Failure, Success, Try }
+import scala.language.implicitConversions
+import scala.sys.process.stringSeqToProcess
+import scala.util.{Failure, Success, Try}
 
 trait FileTransformation extends Locations {
+
+  System.setProperty("LOG_HOME", getPath("/Logs"))
   var logger = Logger("FileImport")
   val currentDateTime: String = getCurrentTimeStamp
 
@@ -40,10 +45,42 @@ trait FileTransformation extends Locations {
     implementation(files)
   }
 
+  def checkDryRun(goodRows: List[RowString]): Int = {
+    goodRows.groupBy(_.content.split("\\|")(1)).size
+  }
+
+  def doDryRun(file: String) = {
+    val fileLocation = file
+    val response = Seq("./DryRun.sh", "agents", fileLocation).!!
+    Json.parse(response)
+  }
+
+  def parseJsonResponse(json: JsValue): Int = {
+    val string = (json \ "message").asOpt[String]
+    string match {
+      case Some(x) => x.head.asDigit
+      case None =>
+        GMailService.sendError()
+        throw new IllegalArgumentException
+    }
+  }
+
+  def thing(file: File) = {
+    if (!isValidFile(file.getCanonicalPath)) {
+      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+    }
+  }
+
+  def filterValid(files: List[File]): List[File] = {
+    val (goodFiles, badFiles) = files.partition(file => isValidFile(file.getCanonicalPath))
+    badFiles.map(file => thing(file))
+    goodFiles
+  }
+
   def manualImplementation(files: List[File]): Unit = {
     val filesWithIndex: List[(File, Int)] = files.zipWithIndex
     filesWithIndex.foreach(x => logger.info((x._2 + 1) + " - " + x._1.getAbsoluteFile.toString))
-    for { file <- files if isValidFile(file.getCanonicalPath) } yield {
+    filterValid(files).map{ file =>
       logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
       val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
       val lineList: List[RowString] = readRows(workbook)
@@ -91,15 +128,15 @@ trait FileTransformation extends Locations {
       logger.info("Unsuccessful records :" + badRowsList.length)
       logger.info("Ignored records :" + ignoredRowsList.length)
       Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
-      if (isSuccessfulRun(file.getName)) {
-        val result = GMailService.sendSuccessfulResult(user)
-      } else {
-        val result = GMailService.sendError()
-      }
+      //      if (isSuccessfulTransformation(file.getName.replaceFirst("\\.[^.]+$", ".txt"))) {
+      //        val result = GMailService.sendSuccessfulResult(user)
+      //      } else {
+      //        val result = GMailService.sendError()
+      //      }
     }
   }
 
-  def isSuccessfulRun(fileName: String): Boolean = {
+  def isSuccessfulTransformation(fileName: String): Boolean = {
     val file = new File("/Files/Output")
     if (file.exists && file.isDirectory) {
       val fileList = file.listFiles.filter(thing => thing.isFile).toList
@@ -154,7 +191,7 @@ trait FileTransformation extends Locations {
   def readRows(workBook: Workbook): List[RowString] = {
     val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
-    val rows: Iterator[Row] = asScalaIterator(sheet.rowIterator())
+    val rows: Iterator[Row] = sheet.rowIterator().asScala
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
       val cells: util.Iterator[Cell] = row.cellIterator()
