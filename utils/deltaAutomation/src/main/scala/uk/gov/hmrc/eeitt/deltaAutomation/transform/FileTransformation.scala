@@ -25,6 +25,7 @@ import scala.util.{Failure, Success, Try}
 trait FileTransformation extends Locations {
 
   System.setProperty("LOG_HOME", getPath("/Logs"))
+
   var logger = Logger("FileImport")
   val currentDateTime: String = getCurrentTimeStamp
 
@@ -115,6 +116,7 @@ trait FileTransformation extends Locations {
       val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
       val user: User = getUser(userIdIndicator)
       val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList)
+      doDryRun(file.getCanonicalPath)
       badRowsList match {
         case Nil =>
           write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
@@ -193,8 +195,7 @@ trait FileTransformation extends Locations {
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
     val rows: Iterator[Row] = sheet.rowIterator().asScala
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
-    for (row <- rows) {
-      val cells: util.Iterator[Cell] = row.cellIterator()
+    rows.foreach{ row =>
       val listOfCells: IndexedSeq[String] = for { cell <- 0 to maxNumOfCells } yield {
         Option(row.getCell(cell)).map(_.toString).getOrElse("")
       }
