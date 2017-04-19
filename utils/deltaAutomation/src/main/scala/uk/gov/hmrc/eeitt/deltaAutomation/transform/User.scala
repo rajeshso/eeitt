@@ -65,7 +65,7 @@ case object BusinessUser extends User {
 
 case object AgentUser extends User {
   override val name: String = "002"
-  override val mandatorySizeOfCells: Int = 23
+  override val mandatorySizeOfCells: Int = 22
   override val goodRecordFormatFunction = (cellsArray: CellsArray) => {
     (RowString(s"""${cellsArray(0).content}|${cellsArray(1).content}|||||||||${cellsArray(10).content}|${cellsArray(11).content}|${cellsArray(12).content}|||||||||${cellsArray(21).content}|${cellsArray(22).content}"""))
   }
