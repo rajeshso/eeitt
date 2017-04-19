@@ -2,10 +2,12 @@ package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
 import java.io.File
 
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.scalalogging.Logger
 
-trait Locations {
+class Locations {
 
+  private val logger = Logger("Locations")
   val conf: Config = ConfigFactory.load()
   val inputFileLocation: String = getFileLocation("location.inputfile.value", "/Files/Input")
   val inputFileArchiveLocation: String = getFileLocation("location.inputfile.archive.value", "/Files/Input/Archive")

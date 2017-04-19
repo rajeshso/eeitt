@@ -2,27 +2,23 @@ package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
 import java.io._
 import java.nio.file.Files._
-import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
+import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 import java.text.SimpleDateFormat
-import java.util
 import java.util.Date
 
-import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.Logger
 import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Cell, Row, Workbook, _}
+import org.apache.poi.ss.usermodel.{Row, Workbook, _}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import play.api.libs.json.{JsValue, Json}
-import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
+import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.language.implicitConversions
-import scala.sys.process.stringSeqToProcess
 import scala.util.{Failure, Success, Try}
 
-trait FileTransformation extends Locations {
+trait FileTransformation extends Locations with Writer with DataValidation {
 
   System.setProperty("LOG_HOME", getPath("/Logs"))
 
@@ -46,42 +42,10 @@ trait FileTransformation extends Locations {
     implementation(files)
   }
 
-  def checkDryRun(goodRows: List[RowString]): Int = {
-    goodRows.groupBy(_.content.split("\\|")(1)).size
-  }
-
-  def doDryRun(file: String) = {
-    val fileLocation = file
-    val response = Seq("./DryRun.sh", "agents", fileLocation).!!
-    Json.parse(response)
-  }
-
-  def parseJsonResponse(json: JsValue): Int = {
-    val string = (json \ "message").asOpt[String]
-    string match {
-      case Some(x) => x.head.asDigit
-      case None =>
-        GMailService.sendError()
-        throw new IllegalArgumentException
-    }
-  }
-
-  def thing(file: File) = {
-    if (!isValidFile(file.getCanonicalPath)) {
-      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
-    }
-  }
-
-  def filterValid(files: List[File]): List[File] = {
-    val (goodFiles, badFiles) = files.partition(file => isValidFile(file.getCanonicalPath))
-    badFiles.map(file => thing(file))
-    goodFiles
-  }
-
   def manualImplementation(files: List[File]): Unit = {
     val filesWithIndex: List[(File, Int)] = files.zipWithIndex
     filesWithIndex.foreach(x => logger.info((x._2 + 1) + " - " + x._1.getAbsoluteFile.toString))
-    filterValid(files).map{ file =>
+    filterValid(files, inputFileArchiveLocation, isValidFile).map{ file =>
       logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
       val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
       val lineList: List[RowString] = readRows(workbook)
@@ -116,7 +80,6 @@ trait FileTransformation extends Locations {
       val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
       val user: User = getUser(userIdIndicator)
       val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList)
-      doDryRun(file.getCanonicalPath)
       badRowsList match {
         case Nil =>
           write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
@@ -125,21 +88,25 @@ trait FileTransformation extends Locations {
           write(outputFileLocation, badFileLocation, List.empty[RowString], badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
           logger.info(s"The file ${file.getAbsoluteFile.toString} has incorrect rows. The file is rejected.")
       }
-      logger.info("Total number of records :" + (lineList.length - 1))
-      logger.info("Successful records :" + goodRowsList.length)
-      logger.info("Unsuccessful records :" + badRowsList.length)
-      logger.info("Ignored records :" + ignoredRowsList.length)
-      Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
-      //      if (isSuccessfulTransformation(file.getName.replaceFirst("\\.[^.]+$", ".txt"))) {
-      //        val result = GMailService.sendSuccessfulResult(user)
-      //      } else {
-      //        val result = GMailService.sendError()
-      //      }
+      if(isGoodData(goodRowsList, file.getCanonicalPath)) {
+        logger.info("Total number of records :" + (lineList.length - 1))
+        logger.info("Successful records :" + goodRowsList.length)
+        logger.info("Unsuccessful records :" + badRowsList.length)
+        logger.info("Ignored records :" + ignoredRowsList.length)
+        Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
+        if (isSuccessfulTransformation(file.getName.replaceFirst("\\.[^.]+$", ".txt"))) {
+          val result = sendSuccessfulResult(user)
+        } else {
+          val result = sendError()
+        }
+      } else {
+        sendError()
+      }
     }
   }
 
   def isSuccessfulTransformation(fileName: String): Boolean = {
-    val file = new File("/Files/Output")
+    val file = new File(getPath("/Files/Output"))
     if (file.exists && file.isDirectory) {
       val fileList = file.listFiles.filter(thing => thing.isFile).toList
       fileList.exists(f => f.getName == fileName)
@@ -154,27 +121,6 @@ trait FileTransformation extends Locations {
       directory.listFiles.filter(_.isFile).toList
     } else {
       List[File]()
-    }
-  }
-
-  def isValidFile(file: String): Boolean = {
-    val path: Path = Paths.get(file)
-    if (!exists(path) || !isRegularFile(path)) {
-      logger.error(s"Invalid filelocation in $file - This file is not processed")
-      false
-    } else if (!isReadable(path)) {
-      logger.error(s"Unable to read from $file - This file is not processed")
-      false
-    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this fragment can throw a null
-      logger.error(s"Incorrent File Content in $file - The program exits")
-      false
-    }*/ else {
-      Try(getFileAsWorkbook(file)) match {
-        case Success(_) => true
-        case Failure(e) =>
-          logger.error(s"Incorrent File Content in $file ${e.getMessage} - This file is not processed")
-          false
-      }
     }
   }
 
@@ -217,46 +163,25 @@ trait FileTransformation extends Locations {
     dateFormat.format(new Date)
   }
 
-  protected def write(
-    outputFileLocation: String,
-    badFileLocation: String,
-    goodRowsList: List[RowString],
-    badRowsList: List[RowString],
-    ignoredRowsList: List[RowString],
-    fileName: String
-  ): Unit = {
-    writeRows(s"$badFileLocation/Ignored${fileName.replaceFirst("\\.[^.]+$", ".txt")}", ignoredRowsList, "Ignored Rows")
-    writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
-    writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
-    writeMaster(s"$outputFileLocation/Master", goodRowsList, fileName.replaceFirst("\\.[^.]+$", ".txt"))
-  }
-
-  private def writeMaster(filePath: String, rowStrings: List[RowString], fileName: String): Unit = {
-    val isAppend = true
-    val regex = "\\s([A-za-z]+)\\s.*(\\d{2})[.](\\d{2})[.]20(\\d{2})[.]".r.unanchored
-    val divider = fileName match {
-      case regex(affinityGroup, one, two, three) => (affinityGroup, one + two + three)
-      case _ => throw new IllegalArgumentException
-    }
-
-    val file = new FileWriter(filePath + divider._1, isAppend)
-    file.write(divider._2 + "\n")
-    rowStrings.foreach(x => file.write(x.content + "\n"))
-    file.close()
-  }
-
-  private def writeRows(file: String, rowStrings: List[RowString], label: String) = {
-    if (rowStrings.nonEmpty) writeToFile(new File(file), label)({ printWriter => rowStrings.foreach(rowString => printWriter.println(rowString.content)) })
-  }
-  def writeToFile(f: File, label: String)(op: (PrintWriter) => Unit): Unit = {
-    val writer: PrintWriter = new PrintWriter(f)
-    try {
-      op(writer)
-      logger.info(s"The file with $label is " + f.getAbsoluteFile)
-    } catch {
-      case e: Throwable => logger.error(e.getMessage)
-    } finally {
-      writer.close()
+  private def isValidFile(file: String): Boolean = {
+    val path: Path = Paths.get(file)
+    if (!exists(path) || !isRegularFile(path)) {
+      logger.error(s"Invalid filelocation in $file - This file is not processed")
+      false
+    } else if (!isReadable(path)) {
+      logger.error(s"Unable to read from $file - This file is not processed")
+      false
+    } /*else if (!Files.probeContentType(path).equals("application/vnd.ms-excel")) { //TODO this fragment can throw a null
+      logger.error(s"Incorrent File Content in $file - The program exits")
+      false
+    }*/ else {
+      Try(getFileAsWorkbook(file)) match {
+        case Success(_) => true
+        case Failure(e) =>
+          logger.error(s"Incorrent File Content in $file ${e.getMessage} - This file is not processed")
+          false
+      }
     }
   }
+
 }
