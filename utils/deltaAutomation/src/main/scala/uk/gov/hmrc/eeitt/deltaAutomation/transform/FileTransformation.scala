@@ -2,28 +2,32 @@ package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
 import java.io._
 import java.nio.file.Files._
-import java.nio.file.{Files, Path, Paths, StandardCopyOption}
+import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 import java.text.SimpleDateFormat
 import java.util.Date
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.poifs.crypt.{Decryptor, EncryptionInfo}
+import org.apache.poi.poifs.crypt.{ Decryptor, EncryptionInfo }
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem
-import org.apache.poi.ss.usermodel.{Row, Workbook, _}
+import org.apache.poi.ss.usermodel.{ Row, Workbook, _ }
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.language.implicitConversions
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 trait FileTransformation extends Locations with Writer with DataValidation {
 
   System.setProperty("LOG_HOME", getPath("/Logs"))
 
   var logger = Logger("FileImport")
-  val currentDateTime: String = getCurrentTimeStamp
+
+  val currentDateTime: String = {
+    val dateFormat = new SimpleDateFormat("EEEdMMMyyyy.HH.mm.ss.SSS")
+    dateFormat.format(new Date)
+  }
 
   val password: String = conf.getString("password.value")
 
@@ -45,7 +49,7 @@ trait FileTransformation extends Locations with Writer with DataValidation {
   def manualImplementation(files: List[File]): Unit = {
     val filesWithIndex: List[(File, Int)] = files.zipWithIndex
     filesWithIndex.foreach(x => logger.info((x._2 + 1) + " - " + x._1.getAbsoluteFile.toString))
-    filterValid(files, inputFileArchiveLocation, isValidFile).map{ file =>
+    filterValid(files, inputFileArchiveLocation, isValidFile).map { file =>
       logger.info(s"Parsing ${file.getAbsoluteFile.toString} ...")
       val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
       val lineList: List[RowString] = readRows(workbook)
@@ -88,7 +92,7 @@ trait FileTransformation extends Locations with Writer with DataValidation {
           write(outputFileLocation, badFileLocation, List.empty[RowString], badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
           logger.info(s"The file ${file.getAbsoluteFile.toString} has incorrect rows. The file is rejected.")
       }
-      if(isGoodData(goodRowsList, file.getCanonicalPath)) {
+      if (isGoodData(goodRowsList, file.getCanonicalPath)) {
         logger.info("Total number of records :" + (lineList.length - 1))
         logger.info("Successful records :" + goodRowsList.length)
         logger.info("Unsuccessful records :" + badRowsList.length)
@@ -141,7 +145,7 @@ trait FileTransformation extends Locations with Writer with DataValidation {
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
     val rows: Iterator[Row] = sheet.rowIterator().asScala
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
-    rows.foreach{ row =>
+    rows.foreach { row =>
       val listOfCells: IndexedSeq[String] = for { cell <- 0 to maxNumOfCells } yield {
         Option(row.getCell(cell)).map(_.toString).getOrElse("")
       }
@@ -156,11 +160,6 @@ trait FileTransformation extends Locations with Writer with DataValidation {
       case AgentUser.name => AgentUser
       case _ => UnsupportedUser
     }
-  }
-
-  def getCurrentTimeStamp: String = {
-    val dateFormat = new SimpleDateFormat("EEEdMMMyyyy.HH.mm.ss.SSS")
-    dateFormat.format(new Date)
   }
 
   private def isValidFile(file: String): Boolean = {

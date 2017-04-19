@@ -1,10 +1,10 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
 import java.io.File
-import java.nio.file.{Files, StandardCopyOption}
+import java.nio.file.{ Files, StandardCopyOption }
 
 import com.typesafe.scalalogging.Logger
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{ JsValue, Json }
 import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 
 import scala.sys.process.stringSeqToProcess
@@ -19,18 +19,18 @@ trait DataValidation {
     goodFiles
   }
 
-  def isGoodData(goodRows:List[RowString], filePath: String) : Boolean = {
+  def isGoodData(goodRows: List[RowString], filePath: String): Boolean = {
     val expected = getActualUniqueUserCount(goodRows)
     val actual = getDryRunUnqiueUserCount(filePath)
     expected == actual
   }
 
-  private def archiveInvalidFiles(file: File, archiveLocation : String): Unit = {
+  private def archiveInvalidFiles(file: File, archiveLocation: String): Unit = {
     logger.debug(s"Archived ${file.getName} to $archiveLocation")
     Files.move(file.toPath, new File(archiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
   }
 
-  private def getDryRunUnqiueUserCount(filePath: String):Int = {
+  private def getDryRunUnqiueUserCount(filePath: String): Int = {
     val response = doDryRun(filePath)
     parseJsonResponse(response)
   }
