@@ -113,7 +113,7 @@ trait FileTransformation extends Locations with Writer with DataValidation {
     val file = new File(getPath("/Files/Output"))
     if (file.exists && file.isDirectory) {
       val fileList = file.listFiles.filter(thing => thing.isFile).toList
-      fileList.exists(f => f.getName == fileName)
+      fileList.exists( f => f.getName == fileName)
     } else {
       false
     }
@@ -182,5 +182,4 @@ trait FileTransformation extends Locations with Writer with DataValidation {
       }
     }
   }
-
 }
