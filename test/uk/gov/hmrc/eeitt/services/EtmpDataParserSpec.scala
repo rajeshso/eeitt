@@ -64,9 +64,9 @@ class EtmpDataParserSpec extends UnitSpec {
       val flatFile =
         """
           >00|CUSTOMER_DATA|ETMP|MDTP|20161103|141116
-          >001|XTAL00000100044|ZAGL|Aggregate Levy (AGL)|7|Limited Company|Organisation1||||BN12 4XL|GB
-          >001|XMAP00000100051|ZAPD|Air Passenger Duty (APD)|7|Limited Company|Organisation2||||BN12 4XL|GB
-          >001|XRIP00000100053|ZIPT|Insurance premium tax (IPT)|1|Sole Proprietor||Mr|Name11|Name21||IT
+          >001|XTAL00000100044 |ZAGL|Aggregate Levy (AGL)|7|Limited Company|Organisation1||||BN12 4XL|GB
+          >001|XMAP0000010005|ZAPD|Air Passenger Duty (APD)|7|Limited Company|Organisation2||||BN12 4XL|GB
+          >001| XRIP00000100053|ZIPT|Insurance premium tax (IPT)|1|Sole Proprietor||Mr|Name11|Name21||IT
           >001|XSBD00440000020|ZBD|Bingo Duty (BD)|7|Limited Company|Organisation3||||BN12 4XL|GB
           >001|XTAL00000100044|ZAGL|Aggregate Levy (AGL)|7|Limited Company|Organisation1||||BN12 4XL|GB
           >001|XALF00000100019|ZLFT|Landfill Tax Registration Number|1|Sole Proprietor||Mr|Name13|Name23||RO
