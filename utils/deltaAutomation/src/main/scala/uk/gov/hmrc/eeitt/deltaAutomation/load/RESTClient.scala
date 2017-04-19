@@ -24,6 +24,7 @@ trait RESTClient {
       case BusinessUser => dryRun(payLoadString, businessurl, requestedWith, username, password)
       case AgentUser => dryRun(payLoadString, agenturl, requestedWith, username, password)
       case UnsupportedUser => HttpResponse[String]("The user is unsupported", 0, Map[String, IndexedSeq[String]]())
+      case _ => HttpResponse[String]("The user is unsupported", 0, Map[String, IndexedSeq[String]]())
     }
   }
 
