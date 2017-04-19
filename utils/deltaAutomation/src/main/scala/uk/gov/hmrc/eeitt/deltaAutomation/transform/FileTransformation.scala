@@ -20,6 +20,8 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{ Failure, Success, Try }
 
 trait FileTransformation extends Locations {
+
+  System.setProperty("LOG_HOME", getPath("/Logs"))
   var logger = Logger("FileImport")
   val currentDateTime: String = getCurrentTimeStamp
 
@@ -91,7 +93,7 @@ trait FileTransformation extends Locations {
       logger.info("Unsuccessful records :" + badRowsList.length)
       logger.info("Ignored records :" + ignoredRowsList.length)
       Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
-      if (isSuccessfulRun(file.getName)) {
+      if (isSuccessfulRun(file.getName.replaceFirst("\\.[^.]+$", ".txt"))) {
         val result = GMailService.sendSuccessfulResult(user)
       } else {
         val result = GMailService.sendError()
@@ -100,7 +102,7 @@ trait FileTransformation extends Locations {
   }
 
   def isSuccessfulRun(fileName: String): Boolean = {
-    val file = new File("/Files/Output")
+    val file = new File(getPath("/Files/Output"))
     if (file.exists && file.isDirectory) {
       val fileList = file.listFiles.filter(thing => thing.isFile).toList
       fileList.exists(f => f.getName == fileName)
@@ -190,7 +192,7 @@ trait FileTransformation extends Locations {
     writeRows(s"$badFileLocation/Ignored${fileName.replaceFirst("\\.[^.]+$", ".txt")}", ignoredRowsList, "Ignored Rows")
     writeRows(s"$badFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
     writeRows(s"$outputFileLocation/${fileName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
-    writeMaster(s"$outputFileLocation/Master", goodRowsList, fileName.replaceFirst("\\.[^.]+$", ".txt"))
+    writeMaster(s"$outputFileLocation/Master/Master", goodRowsList, fileName.replaceFirst("\\.[^.]+$", ".txt"))
   }
 
   //TODO : The Exception has to be handled
