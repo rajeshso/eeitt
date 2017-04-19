@@ -5,7 +5,7 @@ import java.io.{ ByteArrayOutputStream, File, FileOutputStream }
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64
 import com.google.api.services.gmail.model._
 import com.typesafe.scalalogging.Logger
-import uk.gov.hmrc.eeitt.deltaAutomation.transform.{ AgentUser, BusinessUser, User }
+import uk.gov.hmrc.eeitt.deltaAutomation.transform.{ AgentUser, BusinessUser, UnsupportedUser, User }
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
@@ -71,6 +71,7 @@ object GMailService extends GMailHelper {
       affinityGroup match {
         case AgentUser => new File(getPath("/Files/Output/Master") + "/MasterAgent")
         case BusinessUser => new File(getPath("/Files/Output/Master") + "/MasterBusiness")
+        case UnsupportedUser => throw new Exception("The user is unrecognizable")
       }
     }
     val buffer = new ByteArrayOutputStream()
