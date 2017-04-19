@@ -28,11 +28,11 @@ trait RESTClient {
   }
 
   def dryRun(payLoadString: String, url: String, xrequestedwith: String, username: String, password: String): HttpResponse[String] = {
-    val response : HttpResponse[String] = Http(url)
+    val response: HttpResponse[String] = Http(url)
       .header("Content-Type", "application/json")
       .header("Charset", "UTF-8")
-      .header("x-requested-with", "bar")
-      .auth("dave", "davespassword")
+      .header("x-requested-with", xrequestedwith)
+      .auth(username, password)
       .postData(payLoadString.getBytes("UTF-8"))
       .option(HttpOptions.readTimeout(0)).asString
     response
@@ -40,5 +40,5 @@ trait RESTClient {
 }
 
 object RESTClientObject extends RESTClient {
-  def process(payLoadString: String, user: User) : HttpResponse[String] = dryRun(payLoadString, user, requestedWith, username, password)
+  def process(payLoadString: String, user: User): HttpResponse[String] = dryRun(payLoadString, user, requestedWith, username, password)
 }
