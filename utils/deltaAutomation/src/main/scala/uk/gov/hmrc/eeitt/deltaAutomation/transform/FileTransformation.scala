@@ -56,7 +56,7 @@ trait FileTransformation extends Locations with Writer with DataValidation {
       val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
       val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
       val user: User = getUser(userIdIndicator)
-      val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList)
+      val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList, user)
       badRowsList match {
         case Nil =>
           write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)
@@ -83,7 +83,7 @@ trait FileTransformation extends Locations with Writer with DataValidation {
       val linesAndRecordsAsListOfList: List[CellsArray] = lineList.map(line => line.content.split("\\|")).map(strArray => strArray.map(str => CellValue(str)))
       val userIdIndicator: CellValue = linesAndRecordsAsListOfList.tail.head.head
       val user: User = getUser(userIdIndicator)
-      val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList)
+      val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = user.partitionUserNonUserAndIgnoredRecords(lineList, user)
       badRowsList match {
         case Nil =>
           write(outputFileLocation, badFileLocation, goodRowsList, badRowsList, ignoredRowsList, file.getAbsoluteFile.getName)

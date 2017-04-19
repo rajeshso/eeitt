@@ -15,7 +15,33 @@ sealed trait User {
     (RowString(s"""${cellsArray.map(a => a.content).mkString("|")}"""))
   }
 
-  def partitionUserNonUserAndIgnoredRecords(rowsList: List[RowString]): (List[RowString], List[RowString], List[RowString]) = {
+  def partitionUserNonUserAndIgnoredRecords(rowsList: List[RowString], user: User): (List[RowString], List[RowString], List[RowString]) = {
+    user match {
+      case AgentUser => agent(rowsList)
+      case BusinessUser => business(rowsList)
+    }
+  }
+
+  private def agent(rowsList: List[RowString]): (List[RowString], List[RowString], List[RowString]) = {
+    val rowsListExceptHeader: List[RowString] = rowsList.tail
+    val (goodRows, badRows): (List[CellsArray], List[CellsArray]) =
+      rowsListExceptHeader.map(rowString =>
+        rowString.content.split("\\|")).
+        filter(cellArray => cellArray.length > 1).
+        map(cellStringArray => cellStringArray.map(cellString => CellValue(cellString))).
+        partition(cellArray => !(mandatoryCellsMissing(cellArray) || fifthCellHasSelect(cellArray)))
+
+    val (bRows, iRows): (List[CellsArray], List[CellsArray]) = badRows.partition(cellArray => (!fifthCellHasSelect(cellArray)))
+
+    val badRowsWithReason: List[CellsArray] = addReason(bRows)
+    val ignoredRowsWithReason: List[CellsArray] = addReason(iRows)
+    val goodRowsList: List[RowString] = goodRows.map(goodRecordFormatFunction)
+    val badRowsList: List[RowString] = badRowsWithReason.map(badRecordFormatFunction)
+    val ignoredRowsList: List[RowString] = ignoredRowsWithReason.map(badRecordFormatFunction)
+    (goodRowsList, badRowsList, ignoredRowsList)
+  }
+
+  private def business(rowsList: List[RowString]): (List[RowString], List[RowString], List[RowString]) = {
     val rowsListExceptHeader: List[RowString] = rowsList.tail
     val (goodRows, badRows): (List[CellsArray], List[CellsArray]) =
       rowsListExceptHeader.map(rowString =>
@@ -49,6 +75,7 @@ sealed trait User {
   }
 
   def thirdCellHasSelect(cellsArray: CellsArray): Boolean = cellsArray(2).content == "select"
+  def fifthCellHasSelect(cellsArray: CellsArray): Boolean = cellsArray(4).content == "select"
 
   def mandatoryCellsMissing(cellsArray: CellsArray): Boolean = cellsArray.length < mandatorySizeOfCells ||
     cellsArray(1).content.isEmpty ||
@@ -65,7 +92,7 @@ case object BusinessUser extends User {
 
 case object AgentUser extends User {
   override val name: String = "002"
-  override val mandatorySizeOfCells: Int = 23
+  override val mandatorySizeOfCells: Int = 22
   override val goodRecordFormatFunction = (cellsArray: CellsArray) => {
     (RowString(s"""${cellsArray(0).content}|${cellsArray(1).content}|||||||||${cellsArray(10).content}|${cellsArray(11).content}|${cellsArray(12).content}|||||||||${cellsArray(21).content}|${cellsArray(22).content}"""))
   }
@@ -76,7 +103,7 @@ case object UnsupportedUser extends User {
   override val mandatorySizeOfCells: Int = 0
   override val goodRecordFormatFunction = (cellsArray: CellsArray) => RowString("")
 
-  override def partitionUserNonUserAndIgnoredRecords(rowsList: List[RowString]): (List[RowString], List[RowString], List[RowString]) = {
+  override def partitionUserNonUserAndIgnoredRecords(rowsList: List[RowString], user: User): (List[RowString], List[RowString], List[RowString]) = {
     logger.info("An unrecognised file type has been encountered please see the bad output folder")
     (List[RowString](), List[RowString](), List[RowString]())
   }

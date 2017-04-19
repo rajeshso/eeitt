@@ -19,7 +19,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|XPGD0000010088|ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessUserData)
+    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessUserData, BusinessUser)
     goodRowsList(0).content should startWith("001|XPGD0000010088|||||||||BN12 4XL|GB")
   }
 
@@ -28,7 +28,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("002|ZARN0000627|ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
-    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = AgentUser.partitionUserNonUserAndIgnoredRecords(agentData)
+    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = AgentUser.partitionUserNonUserAndIgnoredRecords(agentData, AgentUser)
     goodRowsList(0).content should startWith("002|ZARN0000627|||||||||BN12 4XL|GB|XAAP00000000007||||||||||non")
   }
 
@@ -37,8 +37,8 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Agent Reference Number|Agent Identification Type|Agent Identification Type Description|Agent Organisation Type|Agent Organisation Type Description|Agent Organisation Name|Agent Title|Agent First Name|Agent Second name|Agent Postal code|Agent Country Code|Customer Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("002||ARN|Agent Reference Number|7.0|Limited Company|TRAVEL MARKETING INTERNATIONAL LTD||||BN12 4XL|GB|XAAP00000000007|ZAPD|Air Passenger Duty (APD)|7.0|Limited Company|Airlines|||||non|")
     )
-    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = AgentUser.partitionUserNonUserAndIgnoredRecords(agentData)
-    badRowsList(0).content should startWith("The length of the cells should be 23 and second & third cells should be filled|")
+    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = AgentUser.partitionUserNonUserAndIgnoredRecords(agentData, AgentUser)
+    badRowsList(0).content should startWith("The length of the cells should be 22 and second & third cells should be filled|")
   }
 
   "filter business user bad records" should "remove the bad business user records because its second cell is empty" in {
@@ -46,7 +46,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001||ZGD|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
+    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData, BusinessUser)
     badRowsList(0).content should startWith("The length of the cells should be 12 and second & third cells should be filled")
   }
 
@@ -55,7 +55,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("File Type|Registration Number|Tax Regime|Tax Regime Description|Organisation Type|Organisation Type Description|Organisation Name|Customer Title|Customer First Name|Customer Second Name|Customer Postal Code|Customer Country Code|"),
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|")
     )
-    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
+    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData, BusinessUser)
     ignoredRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
   }
 
@@ -65,7 +65,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB|"),
       RowString("001|XQBD00000000|BINGO|Bingo Duty (BD)|7|Limited Company|Bingo||||BN12 4XL|GB|")
     )
-    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
+    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData, BusinessUser)
     ignoredRowsList(0).content should startWith("The third cell is unselected|001|12345|select|Gaming Duty (GD)|7.0|Limited|LTD||||BN12 4XL|GB")
     goodRowsList(0).content should startWith("001|XQBD00000000|||||||||BN12 4XL|GB")
     badRowsList.size shouldBe (0)
@@ -77,7 +77,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
       RowString("001|XQAL00000100727|ZAGL|Aggregate Levy (AGL)|7|Limited Company|NEEDHAM CHALKS (HAM) LIMITED||||IP6 8EL|GB|"),
       RowString("001||select|select|select|select||||||select|")
     )
-    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData)
+    val (goodRowsList, badRowsList, ignoredRowsList): (List[RowString], List[RowString], List[RowString]) = BusinessUser.partitionUserNonUserAndIgnoredRecords(businessData, BusinessUser)
     ignoredRowsList(0).content should startWith("The third cell is unselected|001||select|select|select|select||||||select")
     goodRowsList(0).content should startWith("001|XQAL00000100727|||||||||IP6 8EL|GB")
     badRowsList.size shouldBe (0)

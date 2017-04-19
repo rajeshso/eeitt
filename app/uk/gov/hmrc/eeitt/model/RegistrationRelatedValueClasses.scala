@@ -1,16 +1,6 @@
 package uk.gov.hmrc.eeitt.model
 
-import play.api.data.validation.ValidationError
-import play.api.libs.json.{
-  Json,
-  OFormat,
-  Format,
-  JsResult,
-  JsSuccess,
-  JsError,
-  JsString,
-  JsValue
-}
+import play.api.libs.json._
 
 class GroupId(val value: String) extends AnyVal
 class RegimeId(val value: String) extends AnyVal
@@ -41,21 +31,21 @@ object RegimeId {
   implicit val format: Format[RegimeId] = ValueClassFormat.format(RegimeId.apply)(_.value)
 }
 
+/**
+ * Note: Registration numbers and ARNs are trimmed and uppercase'd when moving from http to Scala and the database
+ * whereas postcodes are stored as is and normalized during comparison.
+ */
+
 object Arn {
-  def apply(value: String) = new Arn(value.toUpperCase)
+  def apply(value: String) = new Arn(value.toUpperCase.trim)
 
   implicit val format: Format[Arn] = ValueClassFormat.format(Arn.apply)(_.value)
 }
 
 object RegistrationNumber {
-  def apply(value: String) = new RegistrationNumber(value.toUpperCase)
+  def apply(value: String) = new RegistrationNumber(value.toUpperCase.trim)
 
-  implicit val format: Format[RegistrationNumber] = {
-    val format = ValueClassFormat.format(RegistrationNumber.apply)(_.value)
-    val reads = format.filter(ValidationError("Registration number must be 15 characters long"))(_.value.size == 15)
-
-    Format(reads, format)
-  }
+  implicit val format: Format[RegistrationNumber] = ValueClassFormat.format(RegistrationNumber.apply)(_.value)
 }
 
 object Postcode {
