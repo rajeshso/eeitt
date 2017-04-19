@@ -99,9 +99,9 @@ trait FileTransformation extends Locations with Writer with DataValidation {
         logger.info("Ignored records :" + ignoredRowsList.length)
         Files.move(file.toPath, new File(inputFileArchiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
         if (isSuccessfulTransformation(file.getName.replaceFirst("\\.[^.]+$", ".txt"))) {
-          val result = sendSuccessfulResult(user)
+          sendSuccessfulResult(user)
         } else {
-          val result = sendError()
+          sendError()
         }
       } else {
         sendError()
