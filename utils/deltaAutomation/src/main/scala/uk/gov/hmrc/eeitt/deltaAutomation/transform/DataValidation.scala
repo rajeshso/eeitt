@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.Logger
 import play.api.libs.json.{ JsValue, Json }
 import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 
+import scala.io.Source
 import scala.sys.process.stringSeqToProcess
 
 trait DataValidation {
@@ -35,15 +36,25 @@ trait DataValidation {
     parseJsonResponse(response)
   }
 
+  //Full Master Dry Run
+  def test(fileLocation: String, user: User): List[String] = {
+    Source.fromFile(fileLocation + "/Master").getLines.filter(_.startsWith(user.name)).toList
+  }
+
+  def parseMaster(list: List[String]): Int = {
+    list.groupBy(_.split("\\|")(1)).size
+  }
+
+  //Single File Dry Run
   private def getActualUniqueUserCount(goodRows: List[RowString]): Int = {
     goodRows.groupBy(_.content.split("\\|")(1)).size
   }
 
-  private def doDryRun(fileLocation: String): JsValue = {
+  def doDryRun(fileLocation: String): JsValue = {
     Json.parse(Seq("./DryRun.sh", "agents", fileLocation).!!)
   }
 
-  private def parseJsonResponse(json: JsValue): Int = {
+  def parseJsonResponse(json: JsValue): Int = {
     val string = (json \ "message").asOpt[String]
     string match {
       case Some(x) => x.head.asDigit

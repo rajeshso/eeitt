@@ -13,6 +13,7 @@ class Locations {
   val inputFileArchiveLocation: String = getFileLocation("location.inputfile.archive.value", "/Files/Input/Archive")
   val outputFileLocation: String = getFileLocation("location.outputfile.value", "/Files/Output")
   val badFileLocation: String = getFileLocation("location.badfile.value", "/Files/Bad")
+  val masterFileLocation: String = getFileLocation("location.master.value", "/Files/Output/Master")
 
   protected def getPath(location: String): String = {
     val path = getClass.getResource(location).getPath
