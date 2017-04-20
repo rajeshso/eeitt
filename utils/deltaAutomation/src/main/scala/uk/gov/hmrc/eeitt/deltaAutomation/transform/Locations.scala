@@ -5,9 +5,9 @@ import java.io.File
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.Logger
 
-class Locations {
+trait Locations {
 
-  private val logger = Logger("Locations")
+  val logger: Logger
   val conf: Config = ConfigFactory.load()
   val inputFileLocation: String = getFileLocation("location.inputfile.value", "/Files/Input")
   val inputFileArchiveLocation: String = getFileLocation("location.inputfile.archive.value", "/Files/Input/Archive")
@@ -37,4 +37,11 @@ class Locations {
       conf.getString(configValue)
     }
   }
+}
+
+object Locations extends Locations {
+
+  System.setProperty("LOG_HOME", getPath("/Logs"))
+
+  override val logger: Logger = Logger("Locations")
 }

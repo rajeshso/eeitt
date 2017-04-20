@@ -53,6 +53,7 @@ object GMailService extends GMailHelper {
   }
 
   def sendError(): Unit = {
+    logger.info("an error occurred sending error to service account")
     val errorFile = new File(getPath("/Logs") + "/error.log")
     val auditFile = new File(getPath("/Logs") + "/audit.log")
     val buffer = new ByteArrayOutputStream()
@@ -66,6 +67,7 @@ object GMailService extends GMailHelper {
   }
 
   def sendSuccessfulResult(affinityGroup: User): Message = {
+    logger.info(s"Sending a successful $affinityGroup master File")
     val logFile = new File(getPath("/Logs") + "/audit.log")
     val masterFile = {
       affinityGroup match {
