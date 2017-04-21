@@ -1,15 +1,13 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.load
 
-import com.typesafe.config.{Config, ConfigFactory}
-import org.apache.http.HttpResponse
-import org.apache.http.client.methods.HttpOptions
-import uk.gov.hmrc.eeitt.deltaAutomation.transform.{AgentUser, BusinessUser, UnsupportedUser, User}
+import java.net.ConnectException
 
-import scala.util.{Failure, Success, Try}
+import com.typesafe.config.{ Config, ConfigFactory }
+import uk.gov.hmrc.eeitt.deltaAutomation.transform.{ AgentUser, BusinessUser, Locations, UnsupportedUser, User }
 
-/**
- * Created by Rajesh on 13/04/17.
- */
+import scala.util.{ Failure, Success, Try }
+import scalaj.http._
+
 trait RESTClient {
 
   lazy val conf: Config = ConfigFactory.load()
@@ -38,8 +36,8 @@ trait RESTClient {
       .auth(username, password)
       .postData(payLoadString.getBytes("UTF-8"))
       .option(HttpOptions.readTimeout(0)).asString) match {
-      case Success(respo: HttpResponse[String]) => Right (respo)
-      case Failure(exception: Throwable) => Left (exception.getMessage)
+      case Success(respo: HttpResponse[String]) => Right(respo)
+      case Failure(exception: Throwable) => Left(exception.getMessage)
     }
   }
 }

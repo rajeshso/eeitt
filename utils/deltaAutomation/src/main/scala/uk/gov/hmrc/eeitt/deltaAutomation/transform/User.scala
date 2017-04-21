@@ -3,9 +3,7 @@ package uk.gov.hmrc.eeitt.deltaAutomation.transform
 import com.typesafe.scalalogging.Logger
 import sun.invoke.empty.Empty
 
-/**
- * Created by rajesh on 05/04/17.
- */
+
 sealed trait User {
   var logger = Logger("User")
   type CellsArray = Array[CellValue]

@@ -15,7 +15,7 @@ import org.apache.poi.ss.usermodel.{ Cell, Row, Workbook, _ }
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 
-import scala.collection.JavaConverters.asScalaIterator
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{ Failure, Success, Try }
 
@@ -156,7 +156,7 @@ trait FileTransformation extends Locations {
   def readRows(workBook: Workbook): List[RowString] = {
     val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
-    val rows: Iterator[Row] = asScalaIterator(sheet.rowIterator())
+    val rows: Iterator[Row] = sheet.rowIterator().asScala
     val rowBuffer: ListBuffer[RowString] = ListBuffer.empty[RowString]
     for (row <- rows) {
       val cells: util.Iterator[Cell] = row.cellIterator()
