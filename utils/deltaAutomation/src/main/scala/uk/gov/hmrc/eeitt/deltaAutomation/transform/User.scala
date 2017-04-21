@@ -20,7 +20,7 @@ sealed trait User {
     user match {
       case AgentUser => agent(rowsList)
       case BusinessUser => business(rowsList)
-      case _ => (List.empty[RowString],List.empty[RowString],List.empty[RowString])
+      case _ => (List.empty[RowString], List.empty[RowString], List.empty[RowString])
     }
   }
 

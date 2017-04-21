@@ -2,8 +2,8 @@ package uk.gov.hmrc.eeitt.deltaAutomation.load
 
 import java.net.ConnectException
 
-import com.typesafe.config.{Config, ConfigFactory}
-import uk.gov.hmrc.eeitt.deltaAutomation.transform.{AgentUser, BusinessUser, Locations, UnsupportedUser, User}
+import com.typesafe.config.{ Config, ConfigFactory }
+import uk.gov.hmrc.eeitt.deltaAutomation.transform.{ AgentUser, BusinessUser, Locations, UnsupportedUser, User }
 
 import scala.util.{ Failure, Success, Try }
 import scalaj.http._
@@ -32,7 +32,7 @@ trait RESTClient {
   }
 
   def dryRun(payLoadString: String, url: String, xrequestedwith: String, username: String, password: String): Either[HttpResponse[String], String] = {
-    Try (Http(url)
+    Try(Http(url)
       .header("Content-Type", "application/json")
       .header("Charset", "UTF-8")
       .header("x-requested-with", xrequestedwith)
