@@ -1,6 +1,7 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
 import com.typesafe.scalalogging.Logger
+import sun.invoke.empty.Empty
 
 /**
  * Created by rajesh on 05/04/17.
@@ -19,6 +20,7 @@ sealed trait User {
     user match {
       case AgentUser => agent(rowsList)
       case BusinessUser => business(rowsList)
+      case _ => (List.empty[RowString],List.empty[RowString],List.empty[RowString])
     }
   }
 
