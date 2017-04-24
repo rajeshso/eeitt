@@ -10,7 +10,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 trait WorkBookProcessing {
 
   val password: String
-  val iOImplementation: IOImplementation
+  def reader: Reader
   def getFileAsWorkbook(fileLocation: String): XSSFWorkbook = {
     val fs = new NPOIFSFileSystem(new File(s"$fileLocation"), true)
     val info = new EncryptionInfo(fs)
@@ -24,7 +24,7 @@ trait WorkBookProcessing {
 
   def getRows(file: File): List[RowString] = {
     val workbook: Workbook = getFileAsWorkbook(file.getCanonicalPath)
-    iOImplementation.readRows(workbook)
+    reader.readRows(workbook)
   }
 
 }

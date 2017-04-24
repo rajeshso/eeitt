@@ -11,34 +11,22 @@ import uk.gov.hmrc.eeitt.deltaAutomation.transform.UnsupportedUser._
 
 import scala.language.implicitConversions
 
-trait FileTransformation extends IOImplementation with DataValidation with Locations {
+trait FileTransformation extends DataValidation with Locations with IOImplementation {
 
   System.setProperty("LOG_HOME", getPath("/Logs"))
 
-  val logger = Logger("FileImport")
   val isAutomated: Boolean
-  override val iOImplementation: IOImplementation = new IOImplementation {
-    override val logger: Logger = logger
-    override val locations: Locations = Locations
-  }
-  override val locations = Locations
-
+  override def logger = Logger("FileImport")
   val currentDateTime: String = {
     val dateFormat = new SimpleDateFormat("EEEdMMMyyyy.HH.mm.ss.SSS")
     dateFormat.format(new Date)
   }
 
-  val password: String = conf.getString("password.value")
+  override val password: String = conf.getString("password.value")
 
   type CellsArray = Array[CellValue]
 
-  def process(
-    currentDateTime: String,
-    inputFileLocation: String,
-    inputFileArchiveLocation: String,
-    outputFileLocation: String,
-    badFileLocation: String
-  ): Unit = {
+  def process(): Unit = {
     val files: List[File] = getListOfFiles(inputFileLocation)
     logger.info(s"The following ${files.size} files will be processed ")
     implementation(files)
@@ -66,7 +54,7 @@ trait FileTransformation extends IOImplementation with DataValidation with Locat
     getUser(userIdIndicator)
   }
 
-  def onCompletion(file: File, user: User): Any = {
+  def onCompletion(file: File, user: User): Unit = {
     val isGoodMaster = user match {
       case AgentUser => isGoodData(masterFileLocation + "/MasterAgent", user)
       case BusinessUser => isGoodData(masterFileLocation + "/MasterBusiness", user)

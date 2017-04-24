@@ -7,12 +7,13 @@ import org.apache.poi.ss.usermodel.{ Row, Sheet, Workbook }
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.io.Source
 import scala.language.implicitConversions
 
 trait Writer {
 
-  val locations: Locations
-  val logger: Logger
+  def locations: Locations
+  def logger: Logger
 
   protected def write(
     goodRowsList: List[RowString],
@@ -78,6 +79,8 @@ trait Writer {
 
 trait Reader {
 
+  def logger: Logger
+
   def readRows(workBook: Workbook): List[RowString] = {
     val sheet: Sheet = workBook.getSheetAt(0)
     val maxNumOfCells: Short = sheet.getRow(0).getLastCellNum
@@ -91,6 +94,16 @@ trait Reader {
     }
     rowBuffer.toList
   }
+
+  def readDataFromFile(fileLocation: String, user: User): List[String] = {
+    logger.debug(s" The File Location is : $fileLocation")
+    Source.fromFile(fileLocation).getLines().toList.filter(_.startsWith(user.name))
+  }
 }
 
-abstract class IOImplementation extends Reader with Writer
+trait IOImplementation extends Reader with Writer {
+
+  def reader: Reader = new Reader {
+    val logger: Logger = Logger("validation Reader")
+  }
+}

@@ -9,13 +9,13 @@ import play.api.libs.json.{ JsValue, Json }
 import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 import uk.gov.hmrc.eeitt.deltaAutomation.load.RESTClientObject
 
-import scala.io.Source
 import scala.util.{ Failure, Success, Try }
 
 trait DataValidation extends WorkBookProcessing {
 
-  val locations: Locations
-  val logger: Logger
+  def locations: Locations
+  def reader: Reader
+  def logger: Logger
 
   def filterValid(files: List[File], validation: String => Boolean): List[File] = {
     val (goodFiles, badFiles) = files.partition(file => validation(file.getCanonicalPath))
@@ -24,7 +24,7 @@ trait DataValidation extends WorkBookProcessing {
   }
 
   def isGoodData(filePath: String, user: User): Boolean = {
-    val expected = getActualUniqueUserCount(getDataFromFile(filePath, user))
+    val expected = getActualUniqueUserCount(getData(filePath, user))
     val actual = getNumberOfUniqueUsers(filePath, user)
     expected == actual
   }
@@ -35,7 +35,10 @@ trait DataValidation extends WorkBookProcessing {
   }
 
   private def getNumberOfUniqueUsers(fileLocation: String, user: User): Int = {
-    parseJsonResponse(doCall(fileLocation, user))
+    parseJsonResponse(doCall(fileLocation, user)) match {
+      case Left(_) => 0
+      case Right(x) => x
+    }
   }
 
   private def getActualUniqueUserCount(rows: List[String]): Int = {
@@ -43,25 +46,23 @@ trait DataValidation extends WorkBookProcessing {
   }
 
   private def formatData(fileLocation: String, user: User): String = {
-    getDataFromFile(fileLocation, user).mkString("\n")
+    getData(fileLocation, user).mkString("\n")
+  }
+
+  private def getData(fileLocation: String, user: User): List[String] = {
+    reader.readDataFromFile(fileLocation, user)
   }
 
   private def doCall(fileLocation: String, user: User): JsValue = {
     Json.parse(RESTClientObject.process(formatData(fileLocation, user), user).body)
   }
 
-  private def getDataFromFile(fileLocation: String, user: User): List[String] = {
-    logger.debug(s" The File Location is : $fileLocation")
-    Source.fromFile(fileLocation).getLines().toList.filter(_.startsWith(user.name))
-  }
-
-  private def parseJsonResponse(json: JsValue): Int = {
+  private def parseJsonResponse(json: JsValue): Either[Unit, Int] = {
     val string = (json \ "message").asOpt[String]
     string match {
-      case Some(x) => x.head.asDigit
+      case Some(x) => Right(x.head.asDigit)
       case None =>
-        GMailService.sendError()
-        throw new IllegalArgumentException
+        Left(GMailService.sendError())
     }
   }
 
