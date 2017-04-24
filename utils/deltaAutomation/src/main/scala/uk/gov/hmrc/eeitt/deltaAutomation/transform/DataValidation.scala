@@ -6,10 +6,12 @@ import java.nio.file.{ Files, Path, Paths, StandardCopyOption }
 
 import com.typesafe.scalalogging.Logger
 import play.api.libs.json.{ JsValue, Json }
+import uk.gov.hmrc.eeitt.deltaAutomation.errors.FailureReason
 import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 import uk.gov.hmrc.eeitt.deltaAutomation.load.RESTClientObject
 
 import scala.util.{ Failure, Success, Try }
+import scalaz.{ -\/, \/, \/- }
 
 trait DataValidation extends WorkBookProcessing {
 
@@ -24,9 +26,19 @@ trait DataValidation extends WorkBookProcessing {
   }
 
   def isGoodData(filePath: String, user: User): Boolean = {
-    val expected = getActualUniqueUserCount(getData(filePath, user))
-    val actual = getNumberOfUniqueUsers(filePath, user)
-    expected == actual
+    val result = for {
+      actual <- getNumberOfUniqueUsers(filePath, user)
+    } yield {
+      val expected = getActualUniqueUserCount(getData(filePath, user))
+      expected == actual
+    }
+
+    result match {
+      case \/-(x) => x
+      case -\/(err) =>
+        logger.error(s"the dry run failed for ${err.reason}")
+        false
+    }
   }
 
   private def archiveInvalidFiles(file: File, archiveLocation: String): Unit = {
@@ -34,11 +46,16 @@ trait DataValidation extends WorkBookProcessing {
     Files.move(file.toPath, new File(archiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
   }
 
-  private def getNumberOfUniqueUsers(fileLocation: String, user: User): Int = {
-    parseJsonResponse(doCall(fileLocation, user)) match {
-      case Left(_) => 0
-      case Right(x) => x
+  private def getNumberOfUniqueUsers(fileLocation: String, user: User): FailureReason \/ Int = {
+    val numbers = for {
+      result <- doCall(fileLocation, user)
+    } yield {
+      parseJsonResponse(result) match {
+        case Left(_) => 0
+        case Right(x) => x
+      }
     }
+    numbers
   }
 
   private def getActualUniqueUserCount(rows: List[String]): Int = {
@@ -53,8 +70,13 @@ trait DataValidation extends WorkBookProcessing {
     reader.readDataFromFile(fileLocation, user)
   }
 
-  private def doCall(fileLocation: String, user: User): JsValue = {
-    Json.parse(RESTClientObject.process(formatData(fileLocation, user), user).body)
+  private def doCall(fileLocation: String, user: User): FailureReason \/ JsValue = {
+    val response = RESTClientObject.process(formatData(fileLocation, user), user)
+    response match {
+      case Right(x) => \/-(Json.parse(x.body))
+      case Left(err) =>
+        -\/(FailureReason(err))
+    }
   }
 
   private def parseJsonResponse(json: JsValue): Either[Unit, Int] = {

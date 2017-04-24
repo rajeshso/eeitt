@@ -1,3 +1,3 @@
-package uk.gov.hmrc.eeitt.deltaAutomation.Errors
+package uk.gov.hmrc.eeitt.deltaAutomation.errors
 
 case class FailureReason(reason: String)
