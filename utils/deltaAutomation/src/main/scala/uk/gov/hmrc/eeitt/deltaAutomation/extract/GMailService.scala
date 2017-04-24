@@ -1,6 +1,6 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.extract
 
-import java.io.{ ByteArrayOutputStream, File, FileOutputStream }
+import java.io.{ByteArrayOutputStream, File, FileOutputStream}
 import javax.naming.CommunicationException
 
 import com.google.api.client.auth.oauth2.Credential
@@ -13,7 +13,8 @@ import uk.gov.hmrc.eeitt.deltaAutomation.transform._
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
-import scalaz.{ -\/, \/- }
+import scala.util.Try
+import scalaz.{-\/, \/-}
 
 object GMailService extends GMailHelper {
 
@@ -81,7 +82,7 @@ object GMailService extends GMailHelper {
     markMessageAsRead(id)
   }
 
-  def sendError(): Unit = {
+  def sendError(): Message = {
     logger.info("an error occurred sending error to service account")
     val errorFile = new File(getPath("/Logs") + "/error.log")
     val auditFile = new File(getPath("/Logs") + "/audit.log")
@@ -98,20 +99,28 @@ object GMailService extends GMailHelper {
   def sendSuccessfulResult(affinityGroup: User): Message = {
     logger.info(s"Sending a successful $affinityGroup master File")
     val logFile = new File(getPath("/Logs") + "/audit.log")
-    val masterFile = {
+    val masterFile : Option[File]= {
       affinityGroup match {
-        case AgentUser => new File(getPath("/Files/Output/Master") + "/MasterAgent")
-        case BusinessUser => new File(getPath("/Files/Output/Master") + "/MasterBusiness")
-        case UnsupportedUser => throw new Exception("The user is unrecognizable")
+        case AgentUser => Some(new File(getPath("/Files/Output/Master") + "/MasterAgent"))
+        case BusinessUser => Some(new File(getPath("/Files/Output/Master") + "/MasterBusiness"))
+        case _ =>
+          logger.error("this is an unsupported User")
+          None
       }
     }
-    val buffer = new ByteArrayOutputStream()
-    val mimeMessage = createDeltaMessage(logFile, masterFile, "success")
-    mimeMessage.writeTo(buffer)
-    val bytes = buffer.toByteArray
-    val encodedEmail = Base64.encodeBase64URLSafeString(bytes)
-    val message = new Message
-    message.setRaw(encodedEmail)
-    gMailService.users().messages().send("me", message).execute()
+    masterFile match {
+      case Some(x) =>
+        val buffer = new ByteArrayOutputStream ()
+        val mimeMessage = createDeltaMessage (logFile, x, "success")
+        mimeMessage.writeTo (buffer)
+        val bytes = buffer.toByteArray
+        val encodedEmail = Base64.encodeBase64URLSafeString (bytes)
+        val message = new Message
+        message.setRaw (encodedEmail)
+        gMailService.users ().messages ().send("me", message).execute ()
+      case None =>
+        logger.error("failed to send successful message")
+        sendError()
+    }
   }
 }
