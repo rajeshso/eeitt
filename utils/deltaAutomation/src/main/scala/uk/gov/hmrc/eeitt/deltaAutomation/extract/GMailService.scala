@@ -1,18 +1,41 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.extract
 
-import java.io.{ ByteArrayOutputStream, File, FileOutputStream }
+import java.io.{ByteArrayOutputStream, File, FileOutputStream}
+import javax.naming.CommunicationException
 
+import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64
+import com.google.api.services.gmail.Gmail
 import com.google.api.services.gmail.model._
 import com.typesafe.scalalogging.Logger
-import uk.gov.hmrc.eeitt.deltaAutomation.transform.{ AgentUser, BusinessUser, UnsupportedUser, User }
+import uk.gov.hmrc.eeitt.deltaAutomation.transform.Locations._
+import uk.gov.hmrc.eeitt.deltaAutomation.transform._
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
+import scalaz.{-\/, \/-}
 
 object GMailService extends GMailHelper {
 
-  val logger = Logger("GMailService")
+  override val logger = Logger("GMailService")
+  override val gMailService: Gmail = {
+    val service = for {
+      auth <- authorise
+      http <- HTTP_TRANSPORT
+    } yield {
+      val credential: Credential = auth
+      new Gmail.Builder(http, JSON_FACTORY, credential)
+        .setApplicationName(APPLICATION_NAME)
+        .build
+    }
+    service match {
+      case \/-(x) => x
+      case -\/(f) =>
+        logger.error(f.reason)
+        sendError()
+        throw new CommunicationException("Authorises Failed")
+    }
+  }
 
   def onNotification(): Unit = {
     logger.info("Application Started On Notifcation from Gmail")

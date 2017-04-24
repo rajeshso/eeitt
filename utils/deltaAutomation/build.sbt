@@ -2,7 +2,7 @@ name := "delta-automation"
 
 version := "1.0"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.1"
 enablePlugins(JavaAppPackaging)
 libraryDependencies ++= Seq(
   "org.apache.poi" % "poi"              % "3.15-beta2",
@@ -17,7 +17,8 @@ libraryDependencies ++= Seq(
   "com.google.apis" % "google-api-services-gmail" % "v1-rev62-1.22.0",
   "com.typesafe" % "config" % "1.3.1",
   "com.google.apis" % "google-api-services-oauth2" % "v2-rev124-1.22.0",
-  "com.typesafe.play" % "play-json_2.11" % "2.5.14",
+  "com.typesafe.play" %% "play-json" % "2.6.0-M7",
   "com.google.apis" % "google-api-services-drive" % "v3-rev59-1.22.0",
-  "org.scalaj" %% "scalaj-http" % "2.3.0"
+  "org.scalaj" %% "scalaj-http" % "2.3.0",
+  "org.scalaz" %% "scalaz-core" % "7.3.0-M11"
   )

@@ -9,19 +9,18 @@ import javax.mail.internet.{ InternetAddress, MimeBodyPart, MimeMessage, MimeMul
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.services.gmail.Gmail
 import com.google.api.services.gmail.model.{ Message, ModifyMessageRequest }
+import com.typesafe.scalalogging.Logger
+import uk.gov.hmrc.eeitt.deltaAutomation.Errors.FailureReason
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
+import scalaz.{ -\/, \/- }
 
 trait GMailHelper extends GoogleAuthService {
 
+  val logger: Logger
   private val userId = "me"
-  protected val gMailService: Gmail = {
-    val credential: Credential = authorise
-    new Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-      .setApplicationName(APPLICATION_NAME)
-      .build
-  }
+  protected val gMailService: Gmail
 
   protected def getMessageId(message: Message): String = {
     message.getId

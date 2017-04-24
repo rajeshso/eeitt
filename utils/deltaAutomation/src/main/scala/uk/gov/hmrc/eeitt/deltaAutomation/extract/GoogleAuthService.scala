@@ -13,11 +13,13 @@ import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.client.util.store.{ DataStoreFactory, FileDataStoreFactory }
 import com.google.api.services.gmail.GmailScopes
 import com.typesafe.config.{ Config, ConfigFactory }
+import uk.gov.hmrc.eeitt.deltaAutomation.Errors.FailureReason
+import uk.gov.hmrc.eeitt.deltaAutomation.transform.Locations._
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 import scala.util.{ Failure, Success, Try }
-
+import scalaz.{ -\/, \/, \/- }
 class GoogleAuthService {
 
   val config: Config = ConfigFactory.load()
@@ -27,39 +29,34 @@ class GoogleAuthService {
   protected val JSON_FACTORY: JacksonFactory = JacksonFactory.getDefaultInstance
   private val SCOPES = Set(GmailScopes.MAIL_GOOGLE_COM, GmailScopes.GMAIL_MODIFY, GmailScopes.GMAIL_READONLY).asJava
 
-  protected val HTTP_TRANSPORT: HttpTransport =
+  protected val HTTP_TRANSPORT: FailureReason \/ HttpTransport =
     Try(GoogleNetHttpTransport.newTrustedTransport()) match {
-      case Success(x) => x
+      case Success(x) => \/-(x)
       case Failure(f) =>
-        GMailService.sendError()
-        throw new IllegalArgumentException("HTTP_TRANSPORT :- FAILED TO INITIALISE")
+        -\/(FailureReason("HTTP_Transport did not initialise"))
     }
 
-  protected val DATA_STORE_FACTORY: DataStoreFactory =
+  protected val DATA_STORE_FACTORY: FailureReason \/ DataStoreFactory =
     Try(new FileDataStoreFactory(DATA_STORE_DIR)) match {
-      case Success(x) => x
+      case Success(x) => \/-(x)
       case Failure(f) =>
-        GMailService.sendError()
-        throw new IllegalArgumentException(s"DATA_STORE_FACTORY :- FAILED TO INITIALISE ${f.getMessage}")
+        -\/(FailureReason("DataStoreFactory did not Initialise"))
     }
 
-  val authorise: Credential = {
-    val client_secret = getClass.getResourceAsStream("/auth/client_secret.json")
-    val client_secret_input_stream: InputStreamReader = scala.io.Source.fromInputStream(client_secret).reader()
-    val clientSecrets: GoogleClientSecrets = GoogleClientSecrets.load(JSON_FACTORY, client_secret_input_stream)
-    val flow = new GoogleAuthorizationCodeFlow.Builder(HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
-      .setDataStoreFactory(DATA_STORE_FACTORY)
-      .setAccessType("offline")
-      .build
-    new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user")
-  }
-
-  protected def getPath(location: String): String = {
-    val path = getClass.getResource(location).getPath
-    if (path.contains("file:")) {
-      path.drop(5)
-    } else {
-      path
+  val authorise: FailureReason \/ Credential = {
+    for {
+      dataStore <- DATA_STORE_FACTORY
+      http <- HTTP_TRANSPORT
+    } yield {
+      val client_secret = getClass.getResourceAsStream("/auth/client_secret.json")
+      val client_secret_input_stream: InputStreamReader = scala.io.Source.fromInputStream(client_secret).reader()
+      val clientSecrets: GoogleClientSecrets = GoogleClientSecrets.load(JSON_FACTORY, client_secret_input_stream)
+      val flow = new GoogleAuthorizationCodeFlow.Builder(http, JSON_FACTORY, clientSecrets, SCOPES)
+        .setDataStoreFactory(dataStore)
+        .setAccessType("offline")
+        .build
+      new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user")
     }
   }
+
 }

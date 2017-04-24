@@ -6,7 +6,7 @@ object FileTransformationAutomated extends FileTransformation with App {
 
   override val isAutomated: Boolean = true
   onNotification()
-  logger.info("File Import utility successfully initialized with Identity " + currentDateTime)
+  logger.info("Recieved a mail successfully initialized with Identity " + currentDateTime)
   logger.debug(s"Config values are location.inputfile.value = $inputFileLocation, location.inputfile.archive.value= $inputFileArchiveLocation, location.outputfile.value = $outputFileLocation , location.badfile.value=$badFileLocation")
-  process(currentDateTime, inputFileLocation, inputFileArchiveLocation, outputFileLocation, badFileLocation)
+  process()
 }
