@@ -1,6 +1,6 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.extract
 
-import java.io.{ByteArrayOutputStream, File, FileOutputStream}
+import java.io.{ ByteArrayOutputStream, File, FileOutputStream }
 import javax.naming.CommunicationException
 
 import com.google.api.client.auth.oauth2.Credential
@@ -13,7 +13,7 @@ import uk.gov.hmrc.eeitt.deltaAutomation.transform._
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
-import scalaz.{-\/, \/-}
+import scalaz.{ -\/, \/- }
 
 object GMailService extends GMailHelper {
 
@@ -60,8 +60,8 @@ object GMailService extends GMailHelper {
       if (part.getFilename != null && part.getFilename.length > 0) {
         val fileName: String = part.getFilename
         val regex = "\\s([A-za-z]+)\\s.*(\\d{2})[.](\\d{2})[.]20(\\d{2})[.]".r.unanchored
-        fileName match {
-          case regex(_) =>
+        fileName.replaceFirst("\\.[^.]+$", ".txt") match {
+          case regex(_*) =>
             val attId: String = part.getBody.getAttachmentId
             val attachPart: MessagePartBody = gMailService.users().messages().attachments().get(userId, id, attId).execute()
             val base64Url: Base64 = new Base64(true)
@@ -74,7 +74,7 @@ object GMailService extends GMailHelper {
             fileOutFile.close()
             logger.info(s"One Attachment Downloaded $fileName")
           case _ =>
-            logger.error(s"the file $fileName does not match the mandatory naming scheme e.g new Agent Details 00.00.0000")
+            logger.error(s"the file ${fileName.replaceFirst("\\.[^.]+$", ".txt")} does not match the mandatory naming scheme e.g new Agent Details 00.00.0000")
         }
       }
     }
