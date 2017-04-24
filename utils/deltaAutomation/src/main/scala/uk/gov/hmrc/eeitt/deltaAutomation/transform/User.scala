@@ -25,6 +25,7 @@ sealed trait User {
     user match {
       case AgentUser => agent(rowsList)
       case BusinessUser => business(rowsList)
+      case _ => (List.empty[RowString], List.empty[RowString], List.empty[RowString])
     }
   }
 
@@ -69,7 +70,7 @@ sealed trait User {
   private def addReason(badRows: List[CellsArray]) = {
     badRows.map {
       case cellsArray if cellHasSelect(cellsArray) => Array(
-        CellValue("The third cell is unselected")
+        CellValue(s"The $cell cell is unselected")
       ) ++ cellsArray
       case cellArray if mandatoryCellsMissing(cellArray) => Array(
         CellValue("The length of the cells should be " + mandatorySizeOfCells +
