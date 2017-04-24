@@ -13,7 +13,7 @@ import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.client.util.store.{ DataStoreFactory, FileDataStoreFactory }
 import com.google.api.services.gmail.GmailScopes
 import com.typesafe.config.{ Config, ConfigFactory }
-import uk.gov.hmrc.eeitt.deltaAutomation.Errors.FailureReason
+import uk.gov.hmrc.eeitt.deltaAutomation.errors.FailureReason
 import uk.gov.hmrc.eeitt.deltaAutomation.transform.Locations._
 
 import scala.collection.JavaConverters._

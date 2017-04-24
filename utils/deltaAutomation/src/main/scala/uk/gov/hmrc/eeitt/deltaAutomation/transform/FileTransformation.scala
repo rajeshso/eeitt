@@ -58,10 +58,15 @@ trait FileTransformation extends DataValidation with Locations with IOImplementa
     val isGoodMaster = user match {
       case AgentUser => isGoodData(masterFileLocation + "/MasterAgent", user)
       case BusinessUser => isGoodData(masterFileLocation + "/MasterBusiness", user)
+      case _ =>
+        logger.error("user is not valid, this prevents a valid master file being dry run")
+        false
     }
+
     if (isAutomated) {
       success(isGoodMaster, file, user)
     }
+
     logger.info(s"the result of the dry run is $isGoodMaster")
   }
 

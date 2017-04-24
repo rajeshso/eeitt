@@ -2,19 +2,16 @@ package uk.gov.hmrc.eeitt.deltaAutomation.extract
 
 import java.io.File
 import java.util.Properties
-import javax.activation.{ DataHandler, FileDataSource }
+import javax.activation.{DataHandler, FileDataSource}
 import javax.mail.Session
-import javax.mail.internet.{ InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart }
+import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
 
-import com.google.api.client.auth.oauth2.Credential
 import com.google.api.services.gmail.Gmail
-import com.google.api.services.gmail.model.{ Message, ModifyMessageRequest }
+import com.google.api.services.gmail.model.{Message, ModifyMessageRequest}
 import com.typesafe.scalalogging.Logger
-import uk.gov.hmrc.eeitt.deltaAutomation.Errors.FailureReason
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
-import scalaz.{ -\/, \/- }
 
 trait GMailHelper extends GoogleAuthService {
 

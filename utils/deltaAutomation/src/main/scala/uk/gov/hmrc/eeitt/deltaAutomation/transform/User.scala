@@ -1,6 +1,8 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
 import com.typesafe.scalalogging.Logger
+import sun.invoke.empty.Empty
+
 
 sealed trait User {
   var logger = Logger("User")

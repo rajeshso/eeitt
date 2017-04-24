@@ -8,19 +8,19 @@ import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64
 import com.google.api.services.gmail.Gmail
 import com.google.api.services.gmail.model._
 import com.typesafe.scalalogging.Logger
+import uk.gov.hmrc.eeitt.deltaAutomation.errors.FailureReason
 import uk.gov.hmrc.eeitt.deltaAutomation.transform.Locations._
 import uk.gov.hmrc.eeitt.deltaAutomation.transform._
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
-import scala.util.Try
-import scalaz.{-\/, \/-}
+import scalaz.{-\/, \/, \/-}
 
 object GMailService extends GMailHelper {
 
   override val logger = Logger("GMailService")
   override val gMailService: Gmail = {
-    val service = for {
+    val service: FailureReason \/ Gmail = for {
       auth <- authorise
       http <- HTTP_TRANSPORT
     } yield {
@@ -99,7 +99,7 @@ object GMailService extends GMailHelper {
   def sendSuccessfulResult(affinityGroup: User): Message = {
     logger.info(s"Sending a successful $affinityGroup master File")
     val logFile = new File(getPath("/Logs") + "/audit.log")
-    val masterFile : Option[File]= {
+    val masterFile: Option[File] = {
       affinityGroup match {
         case AgentUser => Some(new File(getPath("/Files/Output/Master") + "/MasterAgent"))
         case BusinessUser => Some(new File(getPath("/Files/Output/Master") + "/MasterBusiness"))
@@ -110,14 +110,14 @@ object GMailService extends GMailHelper {
     }
     masterFile match {
       case Some(x) =>
-        val buffer = new ByteArrayOutputStream ()
-        val mimeMessage = createDeltaMessage (logFile, x, "success")
-        mimeMessage.writeTo (buffer)
+        val buffer = new ByteArrayOutputStream()
+        val mimeMessage = createDeltaMessage(logFile, x, "success")
+        mimeMessage.writeTo(buffer)
         val bytes = buffer.toByteArray
-        val encodedEmail = Base64.encodeBase64URLSafeString (bytes)
+        val encodedEmail = Base64.encodeBase64URLSafeString(bytes)
         val message = new Message
-        message.setRaw (encodedEmail)
-        gMailService.users ().messages ().send("me", message).execute ()
+        message.setRaw(encodedEmail)
+        gMailService.users().messages().send("me", message).execute()
       case None =>
         logger.error("failed to send successful message")
         sendError()
