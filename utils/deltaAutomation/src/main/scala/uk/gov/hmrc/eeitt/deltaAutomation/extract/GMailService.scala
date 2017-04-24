@@ -59,17 +59,23 @@ object GMailService extends GMailHelper {
       logger.info(s"Gathering Attachments for the message ${message.getId}")
       if (part.getFilename != null && part.getFilename.length > 0) {
         val fileName: String = part.getFilename
-        val attId: String = part.getBody.getAttachmentId
-        val attachPart: MessagePartBody = gMailService.users().messages().attachments().get(userId, id, attId).execute()
-        val base64Url: Base64 = new Base64(true)
-        logger.info(s"Decoding Email Content")
-        val fileByteArray: Array[Byte] = base64Url.decode(attachPart.getData)
-        val storageLocation = new File(getPath("/Files/Input"))
-        val fileOutFile: FileOutputStream = new FileOutputStream(storageLocation.getPath + "/" + fileName)
-        fileOutFile.write(fileByteArray)
-        logger.debug("closing FileOutputStream")
-        fileOutFile.close()
-        logger.info(s"One Attachment Downloaded $fileName")
+        val regex = "\\s([A-za-z]+)\\s.*(\\d{2})[.](\\d{2})[.]20(\\d{2})[.]".r.unanchored
+        fileName match {
+          case regex(_) =>
+            val attId: String = part.getBody.getAttachmentId
+            val attachPart: MessagePartBody = gMailService.users().messages().attachments().get(userId, id, attId).execute()
+            val base64Url: Base64 = new Base64(true)
+            logger.info(s"Decoding Email Content")
+            val fileByteArray: Array[Byte] = base64Url.decode(attachPart.getData)
+            val storageLocation = new File(getPath("/Files/Input"))
+            val fileOutFile: FileOutputStream = new FileOutputStream(storageLocation.getPath + "/" + fileName)
+            fileOutFile.write(fileByteArray)
+            logger.debug("closing FileOutputStream")
+            fileOutFile.close()
+            logger.info(s"One Attachment Downloaded $fileName")
+          case _ =>
+            logger.error(s"the file $fileName does not match the mandatory naming scheme e.g new Agent Details 00.00.0000")
+        }
       }
     }
     markMessageAsRead(id)

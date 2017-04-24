@@ -16,18 +16,18 @@ trait Writer {
   def logger: Logger
 
   protected def write(
-    goodRowsList: List[RowString],
-    badRowsList: List[RowString],
-    ignoredRowsList: List[RowString],
-    fileName: File,
-    user: User,
-    isGoodData: (String, User) => Boolean
+                       goodRowsList: List[RowString],
+                       badRowsList: List[RowString],
+                       ignoredRowsList: List[RowString],
+                       file: File,
+                       user: User,
+                       isGoodData: (String, User) => Boolean
   ): Unit = {
-    writeRows(s"${locations.badFileLocation}/Ignored${fileName.getName.replaceFirst("\\.[^.]+$", ".txt")}", ignoredRowsList, "Ignored Rows")
-    writeRows(s"${locations.badFileLocation}/${fileName.getName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
-    writeRows(s"${locations.outputFileLocation}/${fileName.getName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
-    if (isGoodData(s"${locations.outputFileLocation}/${fileName.getName.replaceFirst("\\.[^.]+$", ".txt")}", user)) {
-      writeMaster(s"${locations.masterFileLocation}/Master", goodRowsList, fileName.getName.replaceFirst("\\.[^.]+$", ".txt"))
+    writeRows(s"${locations.badFileLocation}/Ignored${file.getName.replaceFirst("\\.[^.]+$", ".txt")}", ignoredRowsList, "Ignored Rows")
+    writeRows(s"${locations.badFileLocation}/${file.getName.replaceFirst("\\.[^.]+$", ".txt")}", badRowsList, "Incorrect Rows ")
+    writeRows(s"${locations.outputFileLocation}/${file.getName.replaceFirst("\\.[^.]+$", ".txt")}", goodRowsList, "Correct Rows ")
+    if (isGoodData(s"${locations.outputFileLocation}/${file.getName.replaceFirst("\\.[^.]+$", ".txt")}", user)) {
+      writeMaster(s"${locations.masterFileLocation}/Master", goodRowsList, file.getName.replaceFirst("\\.[^.]+$", ".txt"))
     }
   }
 
@@ -51,11 +51,10 @@ trait Writer {
     if (rowStrings.nonEmpty) {
       val isAppend = true
       val regex = "\\s([A-za-z]+)\\s.*(\\d{2})[.](\\d{2})[.]20(\\d{2})[.]".r.unanchored
-      val divider = fileName match {
-        case regex(affinityGroup, one, two, three) => (affinityGroup, one + two + three)
-        case _ => throw new IllegalArgumentException("The file name is not in the expected format")
+      val divider = regex.findFirstMatchIn(fileName).map(x => (x.subgroups.head, x.subgroups.tail.mkString)).getOrElse("DEFAULT", "000000")
+      if(divider._1 == "DEFAULT"){
+        logger.error("details have been sent to DEFAULT file as name somehow Invalid")
       }
-
       val file = new FileWriter(filePath + divider._1, isAppend)
       file.write(divider._2 + "\n")
       rowStrings.foreach(x => file.write(x.content + "\n"))
