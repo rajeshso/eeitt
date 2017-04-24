@@ -149,7 +149,7 @@ class FileTransformationCLISpec extends FlatSpec with Matchers {
     workbookAsString shouldBe a[List[_]]
   }
 
-  def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = {
+  def isValidFileLocation(fileLocation: String, read: Boolean, write: Boolean): Boolean = { //TODO is this necessary if we don't make use of any external directory? Also it isn't used in the application
     val path: Path = Paths.get(fileLocation)
     if (!exists(path) || !isDirectory(path)) {
       false

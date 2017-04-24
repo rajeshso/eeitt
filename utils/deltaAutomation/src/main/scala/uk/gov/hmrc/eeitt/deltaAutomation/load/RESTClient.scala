@@ -8,30 +8,27 @@ import uk.gov.hmrc.eeitt.deltaAutomation.transform.{ AgentUser, BusinessUser, Lo
 import scala.util.{ Failure, Success, Try }
 import scalaj.http._
 
-/**
- * Created by Rajesh on 13/04/17.
- */
 trait RESTClient {
 
   lazy val conf: Config = ConfigFactory.load()
-  lazy val username = conf.getString("dryrun.user")
-  lazy val password = conf.getString("dryrun.password")
-  lazy val requestedWith = conf.getString("dryrun.xrequestedwith")
-  lazy val agenturl = conf.getString("dryrun.url.agent")
-  lazy val businessurl = conf.getString("dryrun.url.business")
+  lazy val username: String = conf.getString("dryrun.user")
+  lazy val password: String = conf.getString("dryrun.password")
+  lazy val requestedWith: String = conf.getString("dryrun.xrequestedwith")
+  lazy val agenturl: String = conf.getString("dryrun.url.agent")
+  lazy val businessurl: String = conf.getString("dryrun.url.business")
 
   //logger.debug(s"username = ${username} password = ${password} requestedWith = ${requestedWith} agenturl = ${agenturl} businessurl = ${businessurl}")
 
-  def dryRun(payLoadString: String, user: User, xrequestedwith: String, username: String, password: String): Either[HttpResponse[String], String] = {
+  def dryRun(payLoadString: String, user: User, xrequestedwith: String, username: String, password: String): Either[String, HttpResponse[String]] = {
     user match {
       case BusinessUser => dryRun(payLoadString, businessurl, requestedWith, username, password)
       case AgentUser => dryRun(payLoadString, agenturl, requestedWith, username, password)
-      case UnsupportedUser => Right("The user is unsupported")
-      case _ => Right("The user is unsupported")
+      case UnsupportedUser => Left("The user is unsupported")
+      case _ => Left("The user is unsupported")
     }
   }
 
-  def dryRun(payLoadString: String, url: String, xrequestedwith: String, username: String, password: String): Either[HttpResponse[String], String] = {
+  def dryRun(payLoadString: String, url: String, xrequestedwith: String, username: String, password: String): Either[String, HttpResponse[String]] = {
     Try(Http(url)
       .header("Content-Type", "application/json")
       .header("Charset", "UTF-8")
@@ -39,12 +36,12 @@ trait RESTClient {
       .auth(username, password)
       .postData(payLoadString.getBytes("UTF-8"))
       .option(HttpOptions.readTimeout(0)).asString) match {
-      case Success(respo: HttpResponse[String]) => Left(respo)
-      case Failure(exception: Throwable) => Right(exception.getMessage)
+      case Success(respo: HttpResponse[String]) => Right(respo)
+      case Failure(exception: Throwable) => Left(exception.getMessage)
     }
   }
 }
 
 object RESTClientObject extends RESTClient {
-  def process(payLoadString: String, user: User): Either[HttpResponse[String], String] = dryRun(payLoadString, user, requestedWith, username, password)
+  def process(payLoadString: String, user: User): Either[String, HttpResponse[String]] = dryRun(payLoadString, user, requestedWith, username, password)
 }
