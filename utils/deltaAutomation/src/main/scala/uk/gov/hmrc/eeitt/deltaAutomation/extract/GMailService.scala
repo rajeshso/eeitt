@@ -1,6 +1,6 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.extract
 
-import java.io.{ByteArrayOutputStream, File, FileOutputStream}
+import java.io.{ ByteArrayOutputStream, File, FileOutputStream }
 import javax.naming.CommunicationException
 
 import com.google.api.client.auth.oauth2.Credential
@@ -14,13 +14,12 @@ import uk.gov.hmrc.eeitt.deltaAutomation.transform._
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
-import scalaz.{-\/, \/, \/-}
 
 object GMailService extends GMailHelper {
 
   override val logger = Logger("GMailService")
   override val gMailService: Gmail = {
-    val service: FailureReason \/ Gmail = for {
+    val service: Either[FailureReason, Gmail] = for {
       auth <- authorise
       http <- HTTP_TRANSPORT
     } yield {
@@ -30,8 +29,8 @@ object GMailService extends GMailHelper {
         .build
     }
     service match {
-      case \/-(x) => x
-      case -\/(f) =>
+      case Right(x) => x
+      case Left(f) =>
         logger.error(f.reason)
         sendError()
         throw new CommunicationException("Authorises Failed")

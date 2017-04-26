@@ -1,9 +1,9 @@
 package uk.gov.hmrc.eeitt.deltaAutomation.transform
 
-import java.io.{File, FileWriter, PrintWriter}
+import java.io.{ File, FileWriter, PrintWriter }
 
 import com.typesafe.scalalogging.Logger
-import org.apache.poi.ss.usermodel.{Row, Sheet, Workbook}
+import org.apache.poi.ss.usermodel.{ Row, Sheet, Workbook }
 import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 
 import scala.collection.JavaConverters._

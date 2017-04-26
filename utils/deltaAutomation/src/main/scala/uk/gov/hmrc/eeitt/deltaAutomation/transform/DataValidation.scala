@@ -11,7 +11,6 @@ import uk.gov.hmrc.eeitt.deltaAutomation.extract.GMailService
 import uk.gov.hmrc.eeitt.deltaAutomation.load.RESTClientObject
 
 import scala.util.{ Failure, Success, Try }
-import scalaz.{ -\/, \/, \/- }
 
 trait DataValidation extends WorkBookProcessing {
 
@@ -34,8 +33,8 @@ trait DataValidation extends WorkBookProcessing {
     }
 
     result match {
-      case \/-(x) => x
-      case -\/(err) =>
+      case Right(x) => x
+      case Left(err) =>
         logger.error(s"the dry run failed for ${err.reason}")
         false
     }
@@ -46,7 +45,7 @@ trait DataValidation extends WorkBookProcessing {
     Files.move(file.toPath, new File(archiveLocation + "//" + file.toPath.getFileName).toPath, StandardCopyOption.REPLACE_EXISTING)
   }
 
-  private def getNumberOfUniqueUsers(fileLocation: String, user: User): FailureReason \/ Int = {
+  private def getNumberOfUniqueUsers(fileLocation: String, user: User): Either[FailureReason, Int] = {
     val numbers = for {
       result <- doCall(fileLocation, user)
     } yield {
@@ -70,12 +69,12 @@ trait DataValidation extends WorkBookProcessing {
     reader.readDataFromFile(fileLocation, user)
   }
 
-  private def doCall(fileLocation: String, user: User): FailureReason \/ JsValue = {
+  private def doCall(fileLocation: String, user: User): Either[FailureReason, JsValue] = {
     val response = RESTClientObject.process(formatData(fileLocation, user), user)
     response match {
-      case Right(x) => \/-(Json.parse(x.body))
+      case Right(x) => Right(Json.parse(x.body))
       case Left(err) =>
-        -\/(FailureReason(err))
+        Left(FailureReason(err))
     }
   }
 

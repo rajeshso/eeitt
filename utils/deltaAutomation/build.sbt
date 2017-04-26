@@ -19,6 +19,5 @@ libraryDependencies ++= Seq(
   "com.google.apis" % "google-api-services-oauth2" % "v2-rev124-1.22.0",
   "com.typesafe.play" %% "play-json" % "2.6.0-M7",
   "com.google.apis" % "google-api-services-drive" % "v3-rev59-1.22.0",
-  "org.scalaj" %% "scalaj-http" % "2.3.0",
-  "org.scalaz" %% "scalaz-core" % "7.3.0-M11"
+  "org.scalaj" %% "scalaj-http" % "2.3.0"
   )
